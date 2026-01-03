@@ -1,0 +1,155 @@
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Search, X } from "lucide-react";
+
+interface Account {
+  id: string;
+  name: string;
+  mask: string | null;
+}
+
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface TransactionsFiltersProps {
+  accounts: Account[];
+  categories: Category[];
+}
+
+export function TransactionsFilters({
+  accounts,
+  categories,
+}: TransactionsFiltersProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [searchValue, setSearchValue] = useState(
+    searchParams.get("search") || ""
+  );
+
+  const createQueryString = useCallback(
+    (params: Record<string, string | null>) => {
+      const current = new URLSearchParams(searchParams.toString());
+
+      Object.entries(params).forEach(([key, value]) => {
+        if (value === null || value === "") {
+          current.delete(key);
+        } else {
+          current.set(key, value);
+        }
+      });
+
+      // Reset to page 1 when filters change
+      if (!params.page) {
+        current.delete("page");
+      }
+
+      return current.toString();
+    },
+    [searchParams]
+  );
+
+  const handleAccountChange = (value: string) => {
+    router.push(
+      `/transactions?${createQueryString({
+        account: value === "all" ? null : value,
+      })}`
+    );
+  };
+
+  const handleCategoryChange = (value: string) => {
+    router.push(
+      `/transactions?${createQueryString({
+        category: value === "all" ? null : value,
+      })}`
+    );
+  };
+
+  const handleSearch = () => {
+    router.push(
+      `/transactions?${createQueryString({
+        search: searchValue || null,
+      })}`
+    );
+  };
+
+  const clearFilters = () => {
+    setSearchValue("");
+    router.push("/transactions");
+  };
+
+  const hasFilters =
+    searchParams.get("account") ||
+    searchParams.get("category") ||
+    searchParams.get("search");
+
+  return (
+    <div className="mb-6 flex flex-wrap items-center gap-4">
+      <div className="flex items-center gap-2">
+        <Input
+          placeholder="Search transactions..."
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          className="w-64"
+        />
+        <Button size="icon" variant="outline" onClick={handleSearch}>
+          <Search className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <Select
+        value={searchParams.get("account") || "all"}
+        onValueChange={handleAccountChange}
+      >
+        <SelectTrigger className="w-48">
+          <SelectValue placeholder="All Accounts" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Accounts</SelectItem>
+          {accounts.map((account) => (
+            <SelectItem key={account.id} value={account.id}>
+              {account.name} {account.mask && `(••${account.mask})`}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={searchParams.get("category") || "all"}
+        onValueChange={handleCategoryChange}
+      >
+        <SelectTrigger className="w-48">
+          <SelectValue placeholder="All Categories" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Categories</SelectItem>
+          {categories.map((category) => (
+            <SelectItem key={category.id} value={category.id}>
+              {category.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {hasFilters && (
+        <Button variant="ghost" size="sm" onClick={clearFilters}>
+          <X className="mr-2 h-4 w-4" />
+          Clear filters
+        </Button>
+      )}
+    </div>
+  );
+}
