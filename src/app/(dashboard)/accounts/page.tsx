@@ -34,11 +34,7 @@ export default async function AccountsPage() {
 
       <div className="p-6">
         <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {plaidItems?.map((item) => (
-              <SyncButton key={item.id} plaidItemId={item.id} />
-            ))}
-          </div>
+          <SyncButton plaidItemIds={plaidItems?.map((item) => item.id) || []} />
           <PlaidLinkButton />
         </div>
 

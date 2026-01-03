@@ -6,34 +6,37 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 
 interface SyncButtonProps {
-  plaidItemId: string;
+  plaidItemIds: string[];
 }
 
-export function SyncButton({ plaidItemId }: SyncButtonProps) {
+export function SyncButton({ plaidItemIds }: SyncButtonProps) {
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
 
   const handleSync = async () => {
+    if (plaidItemIds.length === 0) return;
+
     setSyncing(true);
     try {
-      const response = await fetch("/api/plaid/sync-transactions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plaid_item_id: plaidItemId }),
-      });
-
-      const data = await response.json();
-      console.log("Sync result:", data);
-
-      if (response.ok) {
-        router.refresh();
-      }
+      // Sync all plaid items
+      await Promise.all(
+        plaidItemIds.map((plaidItemId) =>
+          fetch("/api/plaid/sync-transactions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ plaid_item_id: plaidItemId }),
+          })
+        )
+      );
+      router.refresh();
     } catch (error) {
       console.error("Sync error:", error);
     } finally {
       setSyncing(false);
     }
   };
+
+  if (plaidItemIds.length === 0) return null;
 
   return (
     <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}>
