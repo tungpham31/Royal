@@ -61,13 +61,13 @@ export function IncomeExpenseChart({ data }: IncomeExpenseChartProps) {
                     <div className="mt-2 space-y-1">
                       <p className="text-sm">
                         <span className="text-muted-foreground">Income: </span>
-                        <span className="font-semibold tabular-nums text-success">
+                        <span className="font-semibold tabular-nums">
                           {formatPrivateAmount(payload[0]?.value as number, isPrivate)}
                         </span>
                       </p>
                       <p className="text-sm">
                         <span className="text-muted-foreground">Expenses: </span>
-                        <span className="font-semibold tabular-nums text-destructive">
+                        <span className="font-semibold tabular-nums">
                           {formatPrivateAmount(payload[1]?.value as number, isPrivate)}
                         </span>
                       </p>
@@ -79,8 +79,8 @@ export function IncomeExpenseChart({ data }: IncomeExpenseChartProps) {
             }}
           />
           <Legend />
-          <Bar dataKey="income" name="Income" fill="#10B981" radius={[4, 4, 0, 0]} />
-          <Bar dataKey="expenses" name="Expenses" fill="#EF4444" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="income" name="Income" fill="#F97316" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="expenses" name="Expenses" fill="#525252" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

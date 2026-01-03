@@ -157,13 +157,7 @@ export default async function InvestmentsPage() {
                         <PrivateAmount amount={holding.value || 0} />
                       </p>
                       {holding.cost_basis && (
-                        <p
-                          className={`text-sm tabular-nums ${
-                            (holding.value || 0) >= holding.cost_basis
-                              ? "text-success"
-                              : "text-destructive"
-                          }`}
-                        >
+                        <p className="text-sm tabular-nums text-muted-foreground">
                           {(holding.value || 0) >= holding.cost_basis ? "+" : ""}
                           <PrivateAmount amount={(holding.value || 0) - holding.cost_basis} />
                         </p>

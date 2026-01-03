@@ -76,9 +76,7 @@ export function NetWorthWidget({ history, currentNetWorth }: NetWorthWidgetProps
             </div>
             {hasData && (
               <div
-                className={`flex items-center justify-end gap-1 text-sm ${
-                  isPositive ? "text-success" : "text-destructive"
-                }`}
+                className="flex items-center justify-end gap-1 text-sm text-muted-foreground"
               >
                 {isPositive ? (
                   <TrendingUp className="h-4 w-4" />

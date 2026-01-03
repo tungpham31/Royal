@@ -80,11 +80,7 @@ export function TransactionsWidget({ transactions }: TransactionsWidgetProps) {
                     )}
                   </div>
                 </div>
-                <span
-                  className={`font-semibold tabular-nums ${
-                    txn.amount > 0 ? "text-expense" : "text-income"
-                  }`}
-                >
+                <span className="font-semibold tabular-nums">
                   {txn.amount > 0 ? "-" : "+"}
                   {formatPrivateAmount(Math.abs(txn.amount), isPrivate)}
                 </span>

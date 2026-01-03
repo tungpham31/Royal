@@ -15,14 +15,14 @@ interface SpendingPieChartProps {
 }
 
 const COLORS = [
-  "#F97316",
-  "#10B981",
-  "#3B82F6",
-  "#F59E0B",
-  "#EC4899",
-  "#8B5CF6",
-  "#14B8A6",
-  "#EF4444",
+  "#F97316", // Orange - primary accent
+  "#525252", // Dark grey
+  "#737373", // Grey
+  "#A3A3A3", // Medium grey
+  "#D4D4D4", // Light grey
+  "#404040", // Charcoal
+  "#858585", // Neutral grey
+  "#BFBFBF", // Silver grey
 ];
 
 export function SpendingPieChart({ data }: SpendingPieChartProps) {

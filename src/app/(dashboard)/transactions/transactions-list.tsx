@@ -155,11 +155,7 @@ export function TransactionsList({
                         </SelectContent>
                       </Select>
 
-                      <span
-                        className={`font-semibold tabular-nums w-24 text-right ${
-                          txn.amount > 0 ? "text-expense" : "text-income"
-                        }`}
-                      >
+                      <span className="font-semibold tabular-nums w-24 text-right">
                         {txn.amount > 0 ? "-" : "+"}
                         {formatPrivateAmount(Math.abs(txn.amount), isPrivate)}
                       </span>

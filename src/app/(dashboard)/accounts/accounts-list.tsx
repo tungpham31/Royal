@@ -103,13 +103,7 @@ export function AccountsList({ groupedAccounts }: AccountsListProps) {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p
-                      className={`font-semibold tabular-nums ${
-                        account.type === "credit" || account.type === "loan"
-                          ? "text-destructive"
-                          : ""
-                      }`}
-                    >
+                    <p className="font-semibold tabular-nums">
                       {formatPrivateAmount(account.current_balance || 0, isPrivate)}
                     </p>
                     {account.available_balance !== null &&

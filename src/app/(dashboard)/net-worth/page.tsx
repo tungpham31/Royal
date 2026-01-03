@@ -51,10 +51,10 @@ export default async function NetWorthPage() {
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Assets
               </CardTitle>
-              <TrendingUp className="h-4 w-4 text-success" />
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold tabular-nums text-success">
+              <div className="text-2xl font-bold tabular-nums">
                 <PrivateAmount amount={summary.totalAssets} />
               </div>
             </CardContent>
@@ -65,10 +65,10 @@ export default async function NetWorthPage() {
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Liabilities
               </CardTitle>
-              <TrendingDown className="h-4 w-4 text-destructive" />
+              <TrendingDown className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold tabular-nums text-destructive">
+              <div className="text-2xl font-bold tabular-nums">
                 <PrivateAmount amount={summary.totalLiabilities} />
               </div>
             </CardContent>
@@ -110,7 +110,7 @@ export default async function NetWorthPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Landmark className="h-5 w-5 text-success" />
+                <Landmark className="h-5 w-5 text-muted-foreground" />
                 Assets
               </CardTitle>
             </CardHeader>
@@ -127,7 +127,7 @@ export default async function NetWorthPage() {
                         <span className="font-medium capitalize">
                           {typeLabels[type] || type}
                         </span>
-                        <span className="font-semibold tabular-nums text-success">
+                        <span className="font-semibold tabular-nums">
                           <PrivateAmount amount={data.total} />
                         </span>
                       </div>
@@ -155,7 +155,7 @@ export default async function NetWorthPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-destructive" />
+                <CreditCard className="h-5 w-5 text-muted-foreground" />
                 Liabilities
               </CardTitle>
             </CardHeader>
@@ -173,7 +173,7 @@ export default async function NetWorthPage() {
                           <span className="font-medium capitalize">
                             {typeLabels[type] || type}
                           </span>
-                          <span className="font-semibold tabular-nums text-destructive">
+                          <span className="font-semibold tabular-nums">
                             <PrivateAmount amount={data.total} />
                           </span>
                         </div>

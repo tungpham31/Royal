@@ -62,7 +62,7 @@ export function SpendingWidget({ history }: SpendingWidgetProps) {
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle>This Month&apos;s Spending</CardTitle>
-          <div className="text-2xl font-bold tabular-nums text-destructive">
+          <div className="text-2xl font-bold tabular-nums">
             {formatPrivateAmount(totalSpending, isPrivate)}
           </div>
         </div>
@@ -73,8 +73,8 @@ export function SpendingWidget({ history }: SpendingWidgetProps) {
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="spendingGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#525252" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#525252" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -114,7 +114,7 @@ export function SpendingWidget({ history }: SpendingWidgetProps) {
               <Area
                 type="monotone"
                 dataKey="cumulative"
-                stroke="hsl(var(--destructive))"
+                stroke="#525252"
                 strokeWidth={2}
                 fill="url(#spendingGradient)"
               />

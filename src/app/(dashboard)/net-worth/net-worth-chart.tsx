@@ -89,13 +89,13 @@ export function NetWorthChart({ data }: NetWorthChartProps) {
                       </p>
                       <p className="text-sm">
                         <span className="text-muted-foreground">Assets: </span>
-                        <span className="font-semibold tabular-nums text-success">
+                        <span className="font-semibold tabular-nums">
                           {formatPrivateAmount(data.assets, isPrivate)}
                         </span>
                       </p>
                       <p className="text-sm">
                         <span className="text-muted-foreground">Liabilities: </span>
-                        <span className="font-semibold tabular-nums text-destructive">
+                        <span className="font-semibold tabular-nums">
                           {formatPrivateAmount(data.liabilities, isPrivate)}
                         </span>
                       </p>
