@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { WidgetConfig, WIDGET_DEFINITIONS } from "@/types/widgets";
 import { WidgetGrid } from "@/components/dashboard/widget-grid";
-import { WidgetSettings } from "@/components/dashboard/widget-settings";
 import {
   NetWorthWidget,
   SpendingWidget,
@@ -40,23 +38,11 @@ export function DashboardClient({
   spendingHistory,
   transactions,
 }: DashboardClientProps) {
-  const [isEditing, setIsEditing] = useState(false);
   // Filter out any invalid widget IDs that may exist in saved preferences
   const validLayout = initialLayout.filter((item) => WIDGET_DEFINITIONS[item.id]);
-  const [layout, setLayout] = useState<WidgetConfig[]>(validLayout);
 
   return (
-    <>
-      <div className="flex justify-end mb-4">
-        <WidgetSettings
-          layout={layout}
-          onLayoutChange={setLayout}
-          isEditing={isEditing}
-          onEditToggle={() => setIsEditing(!isEditing)}
-        />
-      </div>
-
-      <WidgetGrid initialLayout={layout} isEditing={isEditing}>
+    <WidgetGrid initialLayout={validLayout} isEditing={false}>
         {({ layout: sortedLayout, renderWidget }) => (
           <div className="space-y-6">
             {sortedLayout.map((config) => {
@@ -87,7 +73,6 @@ export function DashboardClient({
             })}
           </div>
         )}
-      </WidgetGrid>
-    </>
+    </WidgetGrid>
   );
 }
