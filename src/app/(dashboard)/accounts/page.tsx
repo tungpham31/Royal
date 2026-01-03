@@ -33,9 +33,9 @@ export default async function AccountsPage() {
       />
 
       <div className="p-6">
-        <div className="mb-6 flex items-center justify-between">
-          <SyncButton plaidItemIds={plaidItems?.map((item) => item.id) || []} />
+        <div className="mb-6 flex items-center justify-end gap-2">
           <PlaidLinkButton />
+          <SyncButton plaidItemIds={plaidItems?.map((item) => item.id) || []} />
         </div>
 
         {error ? (
