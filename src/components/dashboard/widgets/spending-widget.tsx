@@ -46,7 +46,7 @@ export function SpendingWidget({ history }: SpendingWidgetProps) {
     return (
       <Card className="col-span-2">
         <CardHeader>
-          <CardTitle>This Month&apos;s Spending</CardTitle>
+          <CardTitle>Spending</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[200px] flex items-center justify-center text-muted-foreground">
@@ -61,7 +61,7 @@ export function SpendingWidget({ history }: SpendingWidgetProps) {
     <Card className="col-span-2">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle>This Month&apos;s Spending</CardTitle>
+          <CardTitle>Spending</CardTitle>
           <div className="text-2xl font-bold tabular-nums">
             {formatPrivateAmount(totalSpending, isPrivate)}
           </div>
