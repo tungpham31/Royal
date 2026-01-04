@@ -147,11 +147,41 @@ export async function POST(request: NextRequest) {
       .update({ cursor, last_synced_at: new Date().toISOString() })
       .eq("id", plaid_item_id);
 
+    // Also sync account balances
+    let balancesUpdated = 0;
+    try {
+      const balanceResponse = await plaidClient.accountsBalanceGet({
+        access_token: plaidItem.access_token,
+      });
+
+      for (const account of balanceResponse.data.accounts) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: balanceError } = await (supabase as any)
+          .from("accounts")
+          .update({
+            current_balance: account.balances.current,
+            available_balance: account.balances.available,
+            last_balance_update: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("plaid_account_id", account.account_id)
+          .eq("plaid_item_id", plaid_item_id);
+
+        if (!balanceError) {
+          balancesUpdated++;
+        }
+      }
+      console.log(`Balance sync: updated ${balancesUpdated} accounts`);
+    } catch (balanceError) {
+      console.error("Error syncing balances:", balanceError);
+    }
+
     return NextResponse.json({
       success: true,
       added: addedCount,
       modified: modifiedCount,
       removed: removedCount,
+      balancesUpdated,
     });
   } catch (error) {
     console.error("Error syncing transactions:", error);
