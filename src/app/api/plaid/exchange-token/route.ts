@@ -24,6 +24,24 @@ export async function POST(request: NextRequest) {
     // Get institution info
     const institutionId = metadata.institution?.institution_id;
     let institutionName = metadata.institution?.name || "Unknown Institution";
+    let institutionLogo: string | null = null;
+
+    // Fetch institution details including logo
+    if (institutionId) {
+      try {
+        const institutionResponse = await plaidClient.institutionsGetById({
+          institution_id: institutionId,
+          country_codes: ["US"],
+          options: {
+            include_optional_metadata: true,
+          },
+        });
+        institutionLogo = institutionResponse.data.institution.logo || null;
+        institutionName = institutionResponse.data.institution.name || institutionName;
+      } catch (instError) {
+        console.error("Error fetching institution details:", instError);
+      }
+    }
 
     // Store the Plaid item (connection)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,6 +53,7 @@ export async function POST(request: NextRequest) {
         access_token: accessToken,
         institution_id: institutionId,
         institution_name: institutionName,
+        institution_logo: institutionLogo,
       })
       .select()
       .single();

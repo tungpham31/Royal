@@ -24,7 +24,7 @@ interface AccountWithPlaidItem {
   last_balance_update: string | null;
   created_at: string;
   updated_at: string;
-  plaid_item?: { institution_name: string } | null;
+  plaid_item?: { institution_name: string; institution_logo: string | null } | null;
 }
 
 export async function getAccounts() {
@@ -39,7 +39,7 @@ export async function getAccounts() {
     .from("accounts")
     .select(`
       *,
-      plaid_item:plaid_items(institution_name)
+      plaid_item:plaid_items(institution_name, institution_logo)
     `)
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })

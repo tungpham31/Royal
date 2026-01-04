@@ -30,6 +30,7 @@ interface Account {
   updated_at: string;
   plaid_item?: {
     institution_name: string;
+    institution_logo: string | null;
   } | null;
 }
 
@@ -206,6 +207,7 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
                 <div className="divide-y">
                   {typeAccounts.map((account) => {
                     const institutionName = account.plaid_item?.institution_name || "Manual";
+                    const institutionLogo = account.plaid_item?.institution_logo;
                     const balance = account.current_balance || 0;
                     const displayBalance = isLiability ? -Math.abs(balance) : balance;
 
@@ -215,16 +217,24 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
                         className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
                       >
                         <div className="flex items-center gap-3">
-                          {/* Institution logo placeholder */}
-                          <div
-                            className={`flex h-9 w-9 items-center justify-center rounded-full text-white text-sm font-medium ${getInstitutionColor(institutionName)}`}
-                          >
-                            {institutionName === "Manual" ? (
-                              <Building2 className="h-4 w-4" />
-                            ) : (
-                              getInstitutionInitial(institutionName)
-                            )}
-                          </div>
+                          {/* Institution logo */}
+                          {institutionLogo ? (
+                            <img
+                              src={`data:image/png;base64,${institutionLogo}`}
+                              alt={institutionName}
+                              className="h-9 w-9 rounded-full object-contain"
+                            />
+                          ) : (
+                            <div
+                              className={`flex h-9 w-9 items-center justify-center rounded-full text-white text-sm font-medium ${getInstitutionColor(institutionName)}`}
+                            >
+                              {institutionName === "Manual" ? (
+                                <Building2 className="h-4 w-4" />
+                              ) : (
+                                getInstitutionInitial(institutionName)
+                              )}
+                            </div>
+                          )}
                           <div>
                             <p className="font-medium">{account.name}</p>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
