@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -212,9 +213,10 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
                     const displayBalance = isLiability ? -Math.abs(balance) : balance;
 
                     return (
-                      <div
+                      <Link
                         key={account.id}
-                        className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+                        href={`/accounts/${account.id}`}
+                        className="flex items-center justify-between py-3 first:pt-0 last:pb-0 -mx-3 px-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
                       >
                         <div className="flex items-center gap-3">
                           {/* Institution logo */}
@@ -254,7 +256,7 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
                             {getRelativeTime(account.updated_at)}
                           </p>
                         </div>
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>

@@ -112,3 +112,76 @@ export async function refreshAccounts() {
   revalidatePath("/accounts");
   revalidatePath("/dashboard");
 }
+
+interface AccountDetail extends AccountWithPlaidItem {
+  transactions?: {
+    id: string;
+    amount: number;
+    date: string;
+    name: string;
+    merchant_name: string | null;
+    category_id: string | null;
+    pending: boolean;
+  }[];
+}
+
+export async function getAccountById(accountId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  // Fetch account details
+  const { data: account, error: accountError } = await supabase
+    .from("accounts")
+    .select(`
+      *,
+      plaid_item:plaid_items(institution_name, institution_logo)
+    `)
+    .eq("id", accountId)
+    .eq("user_id", user.id)
+    .single<AccountWithPlaidItem>();
+
+  if (accountError || !account) {
+    console.error("Error fetching account:", accountError);
+    return { error: "Account not found" };
+  }
+
+  // Fetch transactions for this account
+  const { data: transactions, error: txError } = await supabase
+    .from("transactions")
+    .select(`
+      id,
+      amount,
+      date,
+      name,
+      merchant_name,
+      category_id,
+      pending
+    `)
+    .eq("account_id", accountId)
+    .eq("user_id", user.id)
+    .order("date", { ascending: false })
+    .limit(100);
+
+  if (txError) {
+    console.error("Error fetching transactions:", txError);
+  }
+
+  // Get transaction count
+  const { count: transactionCount } = await supabase
+    .from("transactions")
+    .select("*", { count: "exact", head: true })
+    .eq("account_id", accountId)
+    .eq("user_id", user.id);
+
+  return {
+    account: {
+      ...account,
+      transactions: transactions || [],
+    } as AccountDetail,
+    transactionCount: transactionCount || 0,
+  };
+}
