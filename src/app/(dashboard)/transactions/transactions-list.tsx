@@ -57,6 +57,26 @@ interface TransactionsListProps {
   totalCount: number;
 }
 
+// Human-readable category names for Plaid's format
+const CATEGORY_NAMES: Record<string, string> = {
+  INCOME: "Income",
+  TRANSFER_IN: "Transfer In",
+  TRANSFER_OUT: "Transfer Out",
+  LOAN_PAYMENTS: "Loan Payment",
+  RENT_AND_UTILITIES: "Rent & Utilities",
+  FOOD_AND_DRINK: "Food & Drink",
+  GENERAL_MERCHANDISE: "Shopping",
+  TRANSPORTATION: "Transportation",
+  TRAVEL: "Travel",
+  ENTERTAINMENT: "Entertainment",
+  PERSONAL_CARE: "Personal Care",
+  GENERAL_SERVICES: "Services",
+  HOME_IMPROVEMENT: "Home",
+  MEDICAL: "Medical",
+  GOVERNMENT_AND_NON_PROFIT: "Government",
+  BANK_FEES: "Bank Fees",
+};
+
 // Category emoji icons - supports both friendly names and Plaid's format
 const CATEGORY_EMOJIS: Record<string, string> = {
   // Friendly names
@@ -180,8 +200,10 @@ export function TransactionsList({
                     const merchantName = txn.merchant_name || txn.name;
                     const merchantInitial = merchantName.charAt(0).toUpperCase();
                     // Use category from DB, fallback to Plaid category
-                    const displayCategory = txn.category?.name || txn.plaid_category_primary || "Uncategorized";
-                    const categoryEmoji = CATEGORY_EMOJIS[displayCategory] || "📋";
+                    const rawCategory = txn.category?.name || txn.plaid_category_primary || "Uncategorized";
+                    // Convert to human-readable name
+                    const displayCategory = CATEGORY_NAMES[rawCategory] || rawCategory;
+                    const categoryEmoji = CATEGORY_EMOJIS[rawCategory] || "📋";
                     const accountColor = txn.account ? ACCOUNT_COLORS[txn.account.type] || ACCOUNT_COLORS.other : ACCOUNT_COLORS.other;
                     const isIncome = txn.amount < 0;
 
@@ -203,8 +225,8 @@ export function TransactionsList({
                           </div>
                         )}
 
-                        {/* Merchant name */}
-                        <div className="w-48 min-w-0 shrink-0">
+                        {/* Merchant name - flexible width like Monarch */}
+                        <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">{merchantName}</p>
                           {txn.pending && (
                             <Badge variant="outline" className="text-xs mt-0.5">
@@ -214,7 +236,7 @@ export function TransactionsList({
                         </div>
 
                         {/* Category with emoji */}
-                        <div className="flex items-center gap-2 w-52 shrink-0">
+                        <div className="flex items-center gap-2 w-44 shrink-0">
                           <span className="text-base">{categoryEmoji}</span>
                           <Select
                             value={txn.category?.name || "none"}
@@ -242,7 +264,7 @@ export function TransactionsList({
                         </div>
 
                         {/* Account with colored dot */}
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 w-44 shrink-0">
                           <div className={`h-2.5 w-2.5 rounded-full ${accountColor} shrink-0`} />
                           <span className="text-sm text-muted-foreground truncate">
                             {txn.account?.name || "Unknown"}
