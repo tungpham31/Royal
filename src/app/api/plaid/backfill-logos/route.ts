@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { CountryCode } from "plaid";
 import { plaidClient } from "@/lib/plaid/client";
 import { createClient } from "@/lib/supabase/server";
 
@@ -12,7 +13,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all plaid_items without logos
-    const { data: plaidItems, error: fetchError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: plaidItemsRaw, error: fetchError } = await (supabase as any)
       .from("plaid_items")
       .select("id, institution_id, institution_name")
       .eq("user_id", user.id)
@@ -23,6 +25,8 @@ export async function POST(request: NextRequest) {
       console.error("Error fetching plaid items:", fetchError);
       return NextResponse.json({ error: "Failed to fetch items" }, { status: 500 });
     }
+
+    const plaidItems = plaidItemsRaw as { id: string; institution_id: string | null; institution_name: string | null }[] | null;
 
     if (!plaidItems || plaidItems.length === 0) {
       return NextResponse.json({ message: "No items need logo updates", updated: 0 });
@@ -36,7 +40,7 @@ export async function POST(request: NextRequest) {
       try {
         const institutionResponse = await plaidClient.institutionsGetById({
           institution_id: item.institution_id,
-          country_codes: ["US"],
+          country_codes: [CountryCode.Us],
           options: {
             include_optional_metadata: true,
           },
@@ -45,7 +49,8 @@ export async function POST(request: NextRequest) {
         const logo = institutionResponse.data.institution.logo;
 
         if (logo) {
-          const { error: updateError } = await supabase
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { error: updateError } = await (supabase as any)
             .from("plaid_items")
             .update({ institution_logo: logo })
             .eq("id", item.id);

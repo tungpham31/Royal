@@ -1,7 +1,8 @@
+import { ReactNode } from "react";
 import { getUser } from "@/actions/auth";
 
 interface HeaderProps {
-  title: string;
+  title: ReactNode;
   description?: string;
 }
 

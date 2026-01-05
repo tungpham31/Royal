@@ -79,8 +79,8 @@ export function IncomeExpenseChart({ data }: IncomeExpenseChartProps) {
             }}
           />
           <Legend />
-          <Bar dataKey="income" name="Income" fill="#F97316" radius={[4, 4, 0, 0]} />
-          <Bar dataKey="expenses" name="Expenses" fill="#525252" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="income" name="Income" fill="#9DD9A8" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="expenses" name="Expenses" fill="#F5A5A5" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

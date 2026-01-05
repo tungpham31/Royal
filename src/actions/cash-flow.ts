@@ -40,7 +40,8 @@ export async function getCashFlowData({ month, year }: CashFlowParams) {
     .select("amount, plaid_category_primary, date")
     .eq("user_id", user.id)
     .gte("date", startDateStr)
-    .lte("date", endDateStr);
+    .lte("date", endDateStr)
+    .returns<{ amount: number; plaid_category_primary: string | null; date: string }[]>();
 
   if (error) {
     console.error("Error fetching transactions:", error);
@@ -125,7 +126,8 @@ export async function getCashFlowTrend(months: number = 12) {
     .eq("user_id", user.id)
     .gte("date", startDateStr)
     .lte("date", endDateStr)
-    .order("date", { ascending: true });
+    .order("date", { ascending: true })
+    .returns<{ amount: number; date: string }[]>();
 
   if (error) {
     console.error("Error fetching transactions:", error);

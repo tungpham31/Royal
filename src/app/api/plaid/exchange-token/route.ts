@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { CountryCode } from "plaid";
 import { plaidClient } from "@/lib/plaid/client";
 import { createClient } from "@/lib/supabase/server";
 
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
       try {
         const institutionResponse = await plaidClient.institutionsGetById({
           institution_id: institutionId,
-          country_codes: ["US"],
+          country_codes: [CountryCode.Us],
           options: {
             include_optional_metadata: true,
           },

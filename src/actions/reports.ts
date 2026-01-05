@@ -113,6 +113,74 @@ export async function getMonthlyIncomeExpense(months: number = 6) {
   return { monthlyData: result };
 }
 
+export async function getIncomeByCategory(months: number = 1) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  const startDate = new Date();
+  startDate.setMonth(startDate.getMonth() - months);
+  startDate.setDate(1);
+
+  const { data: transactions, error } = await supabase
+    .from("transactions")
+    .select(`
+      amount,
+      plaid_category_primary
+    `)
+    .eq("user_id", user.id)
+    .gte("date", startDate.toISOString().split("T")[0])
+    .lt("amount", 0) // Income only (negative amounts in Plaid)
+    .returns<{ amount: number; plaid_category_primary: string | null }[]>();
+
+  if (error) {
+    return { error: "Failed to fetch transactions" };
+  }
+
+  // Human-readable category names
+  const categoryNames: Record<string, string> = {
+    INCOME: "Interest",
+    TRANSFER_IN: "Transfer In",
+    LOAN_PAYMENTS: "Loan Payment",
+  };
+
+  const categoryTotals: Record<string, { name: string; total: number; color: string }> = {};
+
+  // Monarch-style income colors
+  const incomeColors = [
+    "#9DD9A8", // mint green
+    "#7EC889", // darker mint
+    "#5FB76A", // medium green
+    "#B8E6C1", // lighter mint
+    "#D4F0DB", // very light mint
+    "#A8D5BA", // sage
+  ];
+  let colorIndex = 0;
+
+  (transactions || []).forEach((txn) => {
+    const rawCategory = txn.plaid_category_primary || "Other Income";
+    const categoryName = categoryNames[rawCategory] ||
+      rawCategory.split("_").map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(" ");
+
+    if (!categoryTotals[categoryName]) {
+      categoryTotals[categoryName] = {
+        name: categoryName,
+        total: 0,
+        color: incomeColors[colorIndex % incomeColors.length]
+      };
+      colorIndex++;
+    }
+    categoryTotals[categoryName].total += Math.abs(txn.amount);
+  });
+
+  const sorted = Object.values(categoryTotals).sort((a, b) => b.total - a.total);
+
+  return { categories: sorted };
+}
+
 export async function getTopMerchants(limit: number = 10) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
