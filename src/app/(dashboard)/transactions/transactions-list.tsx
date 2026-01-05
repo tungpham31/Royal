@@ -11,7 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+} from "lucide-react";
 import { formatPrivateAmount, formatDate } from "@/lib/utils";
 import { usePrivacyStore } from "@/lib/stores/privacy-store";
 import { updateTransactionCategory } from "@/actions/transactions";
@@ -49,6 +53,47 @@ interface TransactionsListProps {
   totalPages: number;
   totalCount: number;
 }
+
+// Category emoji icons like Monarch
+const CATEGORY_EMOJIS: Record<string, string> = {
+  "Food & Dining": "🍽️",
+  "Food & Drink": "🍽️",
+  "Restaurants & Bars": "🍽️",
+  Transportation: "🚗",
+  "Auto Insurance": "🚗",
+  "Gas & EV Charging": "⛽",
+  Shopping: "🛍️",
+  Clothing: "👕",
+  Entertainment: "🎬",
+  "General Merchandise": "📦",
+  "Personal Care": "✨",
+  "General Services": "🔧",
+  "Home Improvement": "🏠",
+  Medical: "🏥",
+  Travel: "✈️",
+  "Rent & Utilities": "🏠",
+  Bills: "📄",
+  Income: "💰",
+  Interest: "🌱",
+  Transfer: "↔️",
+  "Credit Card Payment": "💳",
+  "Loan Payments": "💳",
+  Loan: "💳",
+  Fees: "📋",
+  Software: "💻",
+  Groceries: "🛒",
+  "Coffee Shops": "☕",
+  Taxi: "🚕",
+};
+
+// Account type colors for the dot indicator
+const ACCOUNT_COLORS: Record<string, string> = {
+  depository: "bg-green-500",
+  credit: "bg-orange-500",
+  investment: "bg-blue-500",
+  loan: "bg-red-500",
+  other: "bg-gray-500",
+};
 
 export function TransactionsList({
   transactions,
@@ -96,75 +141,101 @@ export function TransactionsList({
 
       <Card>
         <CardContent className="p-0">
-          {Object.entries(groupedTransactions).map(([date, txns]) => (
-            <div key={date}>
-              <div className="sticky top-0 bg-muted px-4 py-2 text-sm font-medium">
-                {formatDate(date)}
-              </div>
-              <div className="divide-y">
-                {txns.map((txn) => (
-                  <div
-                    key={txn.id}
-                    className="flex items-center justify-between px-4 py-3"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium truncate">
-                          {txn.merchant_name || txn.name}
-                        </p>
-                        {txn.pending && (
-                          <Badge variant="outline" className="text-xs">
-                            Pending
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        {txn.account && (
-                          <span>
-                            {txn.account.name}
-                            {txn.account.mask && ` ••${txn.account.mask}`}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+          {Object.entries(groupedTransactions).map(([date, txns]) => {
+            // Calculate daily total (net: income - expenses)
+            const dailyTotal = txns.reduce((sum, t) => sum - t.amount, 0);
 
-                    <div className="flex items-center gap-4">
-                      <Select
-                        value={txn.category?.name || "none"}
-                        onValueChange={(value) =>
-                          handleCategoryChange(
-                            txn.id,
-                            value === txn.category?.name
-                              ? categories.find((c) => c.name === value)?.id ||
-                                  "none"
-                              : categories.find((c) => c.name === value)?.id ||
-                                  value
-                          )
-                        }
+            return (
+              <div key={date}>
+                <div className="sticky top-0 bg-muted/50 px-4 py-2 flex items-center justify-between border-b">
+                  <span className="text-sm font-medium text-muted-foreground">{formatDate(date)}</span>
+                  <span className={`text-sm font-medium tabular-nums ${dailyTotal >= 0 ? "text-green-600" : "text-muted-foreground"}`}>
+                    {dailyTotal >= 0 ? "+" : ""}
+                    {formatPrivateAmount(dailyTotal, isPrivate)}
+                  </span>
+                </div>
+                <div className="divide-y">
+                  {txns.map((txn) => {
+                    const merchantName = txn.merchant_name || txn.name;
+                    const merchantInitial = merchantName.charAt(0).toUpperCase();
+                    const categoryEmoji = txn.category?.name ? CATEGORY_EMOJIS[txn.category.name] || "📋" : "📋";
+                    const categoryName = txn.category?.name || "Uncategorized";
+                    const accountColor = txn.account ? ACCOUNT_COLORS[txn.account.type] || ACCOUNT_COLORS.other : ACCOUNT_COLORS.other;
+                    const isIncome = txn.amount < 0;
+
+                    return (
+                      <div
+                        key={txn.id}
+                        className="flex items-center gap-4 px-4 py-3 hover:bg-muted/30 transition-colors cursor-pointer"
                       >
-                        <SelectTrigger className="w-40 h-8">
-                          <SelectValue placeholder="Categorize" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Uncategorized</SelectItem>
-                          {categories.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        {/* Merchant logo/initial */}
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-medium shrink-0">
+                          {merchantInitial}
+                        </div>
 
-                      <span className="font-semibold tabular-nums w-24 text-right">
-                        {txn.amount > 0 ? "-" : "+"}
-                        {formatPrivateAmount(Math.abs(txn.amount), isPrivate)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                        {/* Merchant name */}
+                        <div className="w-40 min-w-0 shrink-0">
+                          <p className="font-medium truncate">{merchantName}</p>
+                          {txn.pending && (
+                            <Badge variant="outline" className="text-xs mt-0.5">
+                              Pending
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Category with emoji */}
+                        <div className="flex items-center gap-2 w-44 shrink-0">
+                          <span className="text-base">{categoryEmoji}</span>
+                          <Select
+                            value={txn.category?.name || "none"}
+                            onValueChange={(value) =>
+                              handleCategoryChange(
+                                txn.id,
+                                value === txn.category?.name
+                                  ? categories.find((c) => c.name === value)?.id || "none"
+                                  : categories.find((c) => c.name === value)?.id || value
+                              )
+                            }
+                          >
+                            <SelectTrigger className="h-7 border-0 bg-transparent hover:bg-muted px-2 -ml-2 text-sm text-muted-foreground">
+                              <SelectValue placeholder="Categorize">{categoryName}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Uncategorized</SelectItem>
+                              {categories.map((category) => (
+                                <SelectItem key={category.id} value={category.id}>
+                                  {CATEGORY_EMOJIS[category.name] || "📋"} {category.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Account with colored dot */}
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className={`h-2.5 w-2.5 rounded-full ${accountColor} shrink-0`} />
+                          <span className="text-sm text-muted-foreground truncate">
+                            {txn.account?.name || "Unknown"}
+                          </span>
+                        </div>
+
+                        {/* Amount */}
+                        <div className="w-28 text-right shrink-0">
+                          <span className={`font-semibold tabular-nums ${isIncome ? "text-green-600" : ""}`}>
+                            {isIncome ? "+" : ""}
+                            {formatPrivateAmount(Math.abs(txn.amount), isPrivate)}
+                          </span>
+                        </div>
+
+                        {/* Chevron */}
+                        <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
 

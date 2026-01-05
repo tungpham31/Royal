@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, X } from "lucide-react";
+import { Search, X, ArrowUpDown } from "lucide-react";
 
 interface Account {
   id: string;
@@ -77,6 +77,14 @@ export function TransactionsFilters({
     );
   };
 
+  const handleSortChange = (value: string) => {
+    router.push(
+      `/transactions?${createQueryString({
+        sort: value === "date_desc" ? null : value,
+      })}`
+    );
+  };
+
   const handleSearch = () => {
     router.push(
       `/transactions?${createQueryString({
@@ -93,7 +101,8 @@ export function TransactionsFilters({
   const hasFilters =
     searchParams.get("account") ||
     searchParams.get("category") ||
-    searchParams.get("search");
+    searchParams.get("search") ||
+    searchParams.get("sort");
 
   return (
     <div className="mb-6 flex flex-wrap items-center gap-4">
@@ -141,6 +150,22 @@ export function TransactionsFilters({
               {category.name}
             </SelectItem>
           ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={searchParams.get("sort") || "date_desc"}
+        onValueChange={handleSortChange}
+      >
+        <SelectTrigger className="w-40">
+          <ArrowUpDown className="h-4 w-4 mr-2" />
+          <SelectValue placeholder="Sort" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="date_desc">Newest first</SelectItem>
+          <SelectItem value="date_asc">Oldest first</SelectItem>
+          <SelectItem value="amount_desc">Highest amount</SelectItem>
+          <SelectItem value="amount_asc">Lowest amount</SelectItem>
         </SelectContent>
       </Select>
 

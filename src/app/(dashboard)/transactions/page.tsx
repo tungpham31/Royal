@@ -13,6 +13,7 @@ interface TransactionsPageProps {
     search?: string;
     startDate?: string;
     endDate?: string;
+    sort?: string;
   }>;
 }
 
@@ -31,6 +32,7 @@ export default async function TransactionsPage({
         search: params.search,
         startDate: params.startDate,
         endDate: params.endDate,
+        sort: params.sort,
       }),
       getCategories(),
       getAccounts(),

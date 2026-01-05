@@ -11,6 +11,7 @@ interface GetTransactionsParams {
   startDate?: string;
   endDate?: string;
   search?: string;
+  sort?: string;
 }
 
 export async function getTransactions({
@@ -21,6 +22,7 @@ export async function getTransactions({
   startDate,
   endDate,
   search,
+  sort = "date_desc",
 }: GetTransactionsParams = {}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -36,9 +38,24 @@ export async function getTransactions({
       account:accounts(name, mask, type),
       category:categories(name, icon, color)
     `, { count: "exact" })
-    .eq("user_id", user.id)
-    .order("date", { ascending: false })
-    .order("created_at", { ascending: false });
+    .eq("user_id", user.id);
+
+  // Apply sorting
+  switch (sort) {
+    case "date_asc":
+      query = query.order("date", { ascending: true }).order("created_at", { ascending: true });
+      break;
+    case "amount_desc":
+      query = query.order("amount", { ascending: false }).order("date", { ascending: false });
+      break;
+    case "amount_asc":
+      query = query.order("amount", { ascending: true }).order("date", { ascending: false });
+      break;
+    case "date_desc":
+    default:
+      query = query.order("date", { ascending: false }).order("created_at", { ascending: false });
+      break;
+  }
 
   if (accountId) {
     query = query.eq("account_id", accountId);
