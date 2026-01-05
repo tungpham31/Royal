@@ -9,6 +9,7 @@ import {
   TrendingUp,
   PieChart,
   BarChart3,
+  DollarSign,
   Settings,
   LogOut,
   Eye,
@@ -24,9 +25,10 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Accounts", href: "/accounts", icon: Wallet },
   { name: "Transactions", href: "/transactions", icon: ArrowRightLeft },
+  { name: "Cash Flow", href: "/cash-flow", icon: DollarSign },
+  { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Net Worth", href: "/net-worth", icon: TrendingUp },
   { name: "Investments", href: "/investments", icon: PieChart },
-  { name: "Reports", href: "/reports", icon: BarChart3 },
 ];
 
 export function Sidebar() {
