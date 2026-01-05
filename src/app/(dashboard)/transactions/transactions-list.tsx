@@ -271,6 +271,9 @@ export function TransactionsList({
                           </span>
                         </div>
 
+                        {/* Spacer to push amount right */}
+                        <div className="flex-1" />
+
                         {/* Amount */}
                         <div className="w-28 text-right shrink-0">
                           <span className={`font-semibold tabular-nums ${isIncome ? "text-green-600" : ""}`}>
