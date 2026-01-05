@@ -27,6 +27,8 @@ interface Transaction {
   amount: number;
   date: string;
   pending: boolean;
+  plaid_category_primary: string | null;
+  plaid_category_detailed: string | null;
   account: {
     name: string;
     mask: string | null;
@@ -54,8 +56,9 @@ interface TransactionsListProps {
   totalCount: number;
 }
 
-// Category emoji icons like Monarch
+// Category emoji icons - supports both friendly names and Plaid's format
 const CATEGORY_EMOJIS: Record<string, string> = {
+  // Friendly names
   "Food & Dining": "🍽️",
   "Food & Drink": "🍽️",
   "Restaurants & Bars": "🍽️",
@@ -84,6 +87,23 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   Groceries: "🛒",
   "Coffee Shops": "☕",
   Taxi: "🚕",
+  // Plaid category format (uppercase)
+  INCOME: "💰",
+  TRANSFER_IN: "↔️",
+  TRANSFER_OUT: "↔️",
+  LOAN_PAYMENTS: "💳",
+  RENT_AND_UTILITIES: "🏠",
+  FOOD_AND_DRINK: "🍽️",
+  GENERAL_MERCHANDISE: "📦",
+  TRANSPORTATION: "🚗",
+  TRAVEL: "✈️",
+  ENTERTAINMENT: "🎬",
+  PERSONAL_CARE: "✨",
+  GENERAL_SERVICES: "🔧",
+  HOME_IMPROVEMENT: "🏠",
+  MEDICAL: "🏥",
+  GOVERNMENT_AND_NON_PROFIT: "🏛️",
+  BANK_FEES: "📋",
 };
 
 // Account type colors for the dot indicator
@@ -158,23 +178,24 @@ export function TransactionsList({
                   {txns.map((txn) => {
                     const merchantName = txn.merchant_name || txn.name;
                     const merchantInitial = merchantName.charAt(0).toUpperCase();
-                    const categoryEmoji = txn.category?.name ? CATEGORY_EMOJIS[txn.category.name] || "📋" : "📋";
-                    const categoryName = txn.category?.name || "Uncategorized";
+                    // Use category from DB, fallback to Plaid category
+                    const displayCategory = txn.category?.name || txn.plaid_category_primary || "Uncategorized";
+                    const categoryEmoji = CATEGORY_EMOJIS[displayCategory] || "📋";
                     const accountColor = txn.account ? ACCOUNT_COLORS[txn.account.type] || ACCOUNT_COLORS.other : ACCOUNT_COLORS.other;
                     const isIncome = txn.amount < 0;
 
                     return (
                       <div
                         key={txn.id}
-                        className="flex items-center gap-4 px-4 py-3 hover:bg-muted/30 transition-colors cursor-pointer"
+                        className="flex items-center gap-6 px-4 py-3 hover:bg-muted/30 transition-colors cursor-pointer"
                       >
-                        {/* Merchant logo/initial */}
+                        {/* Merchant initial */}
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-medium shrink-0">
                           {merchantInitial}
                         </div>
 
                         {/* Merchant name */}
-                        <div className="w-40 min-w-0 shrink-0">
+                        <div className="w-48 min-w-0 shrink-0">
                           <p className="font-medium truncate">{merchantName}</p>
                           {txn.pending && (
                             <Badge variant="outline" className="text-xs mt-0.5">
@@ -184,7 +205,7 @@ export function TransactionsList({
                         </div>
 
                         {/* Category with emoji */}
-                        <div className="flex items-center gap-2 w-44 shrink-0">
+                        <div className="flex items-center gap-2 w-52 shrink-0">
                           <span className="text-base">{categoryEmoji}</span>
                           <Select
                             value={txn.category?.name || "none"}
@@ -198,7 +219,7 @@ export function TransactionsList({
                             }
                           >
                             <SelectTrigger className="h-7 border-0 bg-transparent hover:bg-muted px-2 -ml-2 text-sm text-muted-foreground">
-                              <SelectValue placeholder="Categorize">{categoryName}</SelectValue>
+                              <SelectValue placeholder="Categorize">{displayCategory}</SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">Uncategorized</SelectItem>

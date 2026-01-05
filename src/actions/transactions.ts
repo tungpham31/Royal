@@ -34,7 +34,14 @@ export async function getTransactions({
   let query = supabase
     .from("transactions")
     .select(`
-      *,
+      id,
+      name,
+      merchant_name,
+      amount,
+      date,
+      pending,
+      plaid_category_primary,
+      plaid_category_detailed,
       account:accounts(name, mask, type),
       category:categories(name, icon, color)
     `, { count: "exact" })
