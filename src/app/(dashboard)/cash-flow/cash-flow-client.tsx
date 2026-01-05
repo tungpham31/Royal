@@ -64,19 +64,22 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   "Bank Fees": "📋",
 };
 
-// Expense bar colors - gradient from red to lighter shades
+// Expense bar colors - Monarch-style soft pastels
 const EXPENSE_BAR_COLORS = [
-  "bg-red-400",
-  "bg-orange-300",
-  "bg-amber-300",
-  "bg-yellow-200",
-  "bg-lime-200",
-  "bg-green-200",
-  "bg-emerald-200",
-  "bg-teal-200",
-  "bg-cyan-200",
-  "bg-sky-200",
+  "bg-[#F5A5A5]", // coral/salmon for largest expense
+  "bg-[#F5C9A5]", // peach/orange
+  "bg-[#F5D5A5]", // light orange
+  "bg-[#C8E6C9]", // soft mint green
+  "bg-[#D4E6D5]", // lighter mint
+  "bg-[#E0E6E0]", // very light gray-green
+  "bg-[#E5E5E5]", // light gray
+  "bg-[#ECECEC]", // lighter gray
+  "bg-[#F2F2F2]", // very light gray
+  "bg-[#F8F8F8]", // near white
 ];
+
+// Income bar color - Monarch-style mint green
+const INCOME_BAR_COLOR = "bg-[#9DD9A8]";
 
 interface CategoryBreakdown {
   category: string;
@@ -177,14 +180,8 @@ export function CashFlowClient({
 
   return (
     <div className="space-y-6">
-      {/* Header with Time Period Toggle */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Cash Flow</h1>
-          <p className="text-muted-foreground">
-            Track your income and expenses over time
-          </p>
-        </div>
+      {/* Time Period Toggle */}
+      <div className="flex items-center justify-end">
         <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
           <Button
             variant={timeFrame === "monthly" ? "default" : "ghost"}
@@ -250,12 +247,12 @@ export function CashFlowClient({
                   >
                     <div className="w-full flex gap-0.5 items-end h-36">
                       <div
-                        className="flex-1 bg-green-400 rounded-t transition-all hover:bg-green-500"
+                        className="flex-1 bg-[#9DD9A8] rounded-t transition-all hover:bg-[#8BCF98]"
                         style={{ height: `${incomeHeight}%` }}
                         title={`Income: ${formatPrivateAmount(month.income, isPrivate)}`}
                       />
                       <div
-                        className="flex-1 bg-red-300 rounded-t transition-all hover:bg-red-400"
+                        className="flex-1 bg-[#F5A5A5] rounded-t transition-all hover:bg-[#F09090]"
                         style={{ height: `${expenseHeight}%` }}
                         title={`Expenses: ${formatPrivateAmount(month.expenses, isPrivate)}`}
                       />
@@ -272,11 +269,11 @@ export function CashFlowClient({
           {/* Chart Legend */}
           <div className="flex items-center justify-center gap-6 mt-4 text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-400 rounded" />
+              <div className="w-3 h-3 bg-[#9DD9A8] rounded" />
               <span className="text-muted-foreground">Income</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-red-300 rounded" />
+              <div className="w-3 h-3 bg-[#F5A5A5] rounded" />
               <span className="text-muted-foreground">Expenses</span>
             </div>
           </div>
@@ -361,7 +358,7 @@ export function CashFlowClient({
                   }}
                 >
                   <div
-                    className="absolute inset-y-0 left-0 bg-green-400 rounded-lg transition-all"
+                    className={`absolute inset-y-0 left-0 ${INCOME_BAR_COLOR} rounded-lg transition-all`}
                     style={{ width: `${item.percentage}%` }}
                   />
                   <div className="absolute inset-0 flex items-center justify-between px-3">
