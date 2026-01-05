@@ -29,6 +29,7 @@ interface Transaction {
   pending: boolean;
   plaid_category_primary: string | null;
   plaid_category_detailed: string | null;
+  logo_url: string | null;
   account: {
     name: string;
     mask: string | null;
@@ -189,10 +190,18 @@ export function TransactionsList({
                         key={txn.id}
                         className="flex items-center gap-6 px-4 py-3 hover:bg-muted/30 transition-colors cursor-pointer"
                       >
-                        {/* Merchant initial */}
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-medium shrink-0">
-                          {merchantInitial}
-                        </div>
+                        {/* Merchant logo/initial */}
+                        {txn.logo_url ? (
+                          <img
+                            src={txn.logo_url}
+                            alt={merchantName}
+                            className="h-10 w-10 rounded-full object-cover shrink-0"
+                          />
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-medium shrink-0">
+                            {merchantInitial}
+                          </div>
+                        )}
 
                         {/* Merchant name */}
                         <div className="w-48 min-w-0 shrink-0">

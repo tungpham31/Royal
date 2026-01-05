@@ -42,6 +42,7 @@ export async function getTransactions({
       pending,
       plaid_category_primary,
       plaid_category_detailed,
+      logo_url,
       account:accounts(name, mask, type),
       category:categories(name, icon, color)
     `, { count: "exact" })

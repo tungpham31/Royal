@@ -68,6 +68,9 @@ export async function POST(request: NextRequest) {
             const accountId = accountMap.get(txn.account_id);
             if (!accountId) return null;
 
+            // Get logo from counterparties (Plaid provides merchant logos here)
+            const logoUrl = txn.counterparties?.[0]?.logo_url || null;
+
             return {
               user_id: user.id,
               account_id: accountId,
@@ -79,6 +82,7 @@ export async function POST(request: NextRequest) {
               pending: txn.pending,
               plaid_category_primary: txn.personal_finance_category?.primary || null,
               plaid_category_detailed: txn.personal_finance_category?.detailed || null,
+              logo_url: logoUrl,
             };
           })
           .filter(Boolean);
@@ -104,6 +108,9 @@ export async function POST(request: NextRequest) {
         const accountId = accountMap.get(txn.account_id);
         if (!accountId) continue;
 
+        // Get logo from counterparties
+        const logoUrl = txn.counterparties?.[0]?.logo_url || null;
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error: updateError } = await (supabase as any)
           .from("transactions")
@@ -115,6 +122,7 @@ export async function POST(request: NextRequest) {
             pending: txn.pending,
             plaid_category_primary: txn.personal_finance_category?.primary || null,
             plaid_category_detailed: txn.personal_finance_category?.detailed || null,
+            logo_url: logoUrl,
           })
           .eq("plaid_transaction_id", txn.transaction_id);
 
