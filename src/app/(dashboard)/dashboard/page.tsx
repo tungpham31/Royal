@@ -19,7 +19,7 @@ export default async function DashboardPage() {
     getDashboardStats(),
     getRecentTransactions(),
     getDashboardPreferences(),
-    getNetWorthHistory(),
+    getNetWorthHistory(365), // Fetch 1 year for time period filtering
     getCurrentMonthSpending(),
   ]);
 
@@ -28,6 +28,7 @@ export default async function DashboardPage() {
   const layout = preferencesResult.layout;
   const netWorthHistory = netWorthResult.history || [];
   const spendingHistory = spendingResult.spendingHistory || [];
+  const lastMonthHistory = spendingResult.lastMonthHistory || [];
 
   return (
     <>
@@ -39,6 +40,7 @@ export default async function DashboardPage() {
           currentNetWorth={currentNetWorth}
           netWorthHistory={netWorthHistory}
           spendingHistory={spendingHistory}
+          lastMonthHistory={lastMonthHistory}
           transactions={transactions}
         />
       </div>

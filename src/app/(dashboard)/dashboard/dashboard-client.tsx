@@ -21,6 +21,10 @@ interface DashboardClientProps {
     date: string;
     amount: number;
   }>;
+  lastMonthHistory: Array<{
+    day: number;
+    amount: number;
+  }>;
   transactions: Array<{
     id: string;
     name: string;
@@ -36,6 +40,7 @@ export function DashboardClient({
   currentNetWorth,
   netWorthHistory,
   spendingHistory,
+  lastMonthHistory,
   transactions,
 }: DashboardClientProps) {
   // Filter out any invalid widget IDs that may exist in saved preferences
@@ -59,7 +64,10 @@ export function DashboardClient({
                 case "spending":
                   return renderWidget(
                     "spending",
-                    <SpendingWidget history={spendingHistory} />,
+                    <SpendingWidget
+                      history={spendingHistory}
+                      lastMonthHistory={lastMonthHistory}
+                    />,
                     "col-span-2"
                   );
                 case "recent-transactions":

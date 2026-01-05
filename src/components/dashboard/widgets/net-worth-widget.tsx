@@ -1,6 +1,14 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatPrivateAmount, MASKED_AMOUNT_SHORT } from "@/lib/utils";
 import { usePrivacyStore } from "@/lib/stores/privacy-store";
 import { TrendingUp, TrendingDown } from "lucide-react";
@@ -26,10 +34,35 @@ interface NetWorthWidgetProps {
   currentNetWorth: number;
 }
 
+type TimePeriod = "1M" | "3M" | "6M" | "1Y" | "ALL";
+
+const TIME_PERIODS: { value: TimePeriod; label: string; days: number | null }[] = [
+  { value: "1M", label: "1 month", days: 30 },
+  { value: "3M", label: "3 months", days: 90 },
+  { value: "6M", label: "6 months", days: 180 },
+  { value: "1Y", label: "1 year", days: 365 },
+  { value: "ALL", label: "All time", days: null },
+];
+
 export function NetWorthWidget({ history, currentNetWorth }: NetWorthWidgetProps) {
   const { isPrivate } = usePrivacyStore();
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("1M");
 
-  const chartData = history.map((item) => ({
+  // Filter history based on selected time period
+  const filteredHistory = useMemo(() => {
+    const period = TIME_PERIODS.find((p) => p.value === timePeriod);
+    if (!period || period.days === null) {
+      return history;
+    }
+
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - period.days);
+    const cutoffStr = cutoffDate.toISOString().split("T")[0];
+
+    return history.filter((item) => item.date >= cutoffStr);
+  }, [history, timePeriod]);
+
+  const chartData = filteredHistory.map((item) => ({
     date: new Date(item.date).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -37,10 +70,10 @@ export function NetWorthWidget({ history, currentNetWorth }: NetWorthWidgetProps
     value: item.net_worth,
   }));
 
-  // Calculate trend
-  const hasData = history.length >= 2;
-  const firstValue = history[0]?.net_worth || 0;
-  const lastValue = history[history.length - 1]?.net_worth || 0;
+  // Calculate trend based on filtered data
+  const hasData = filteredHistory.length >= 2;
+  const firstValue = filteredHistory[0]?.net_worth || 0;
+  const lastValue = filteredHistory[filteredHistory.length - 1]?.net_worth || 0;
   const change = lastValue - firstValue;
   const changePercent = firstValue !== 0 ? ((change / firstValue) * 100).toFixed(1) : "0";
   const isPositive = change >= 0;
@@ -69,7 +102,24 @@ export function NetWorthWidget({ history, currentNetWorth }: NetWorthWidgetProps
     <Card className="col-span-2">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle>Net Worth</CardTitle>
+          <div className="flex items-center gap-3">
+            <CardTitle>Net Worth</CardTitle>
+            <Select
+              value={timePeriod}
+              onValueChange={(value: TimePeriod) => setTimePeriod(value)}
+            >
+              <SelectTrigger className="h-8 w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TIME_PERIODS.map((period) => (
+                  <SelectItem key={period.value} value={period.value}>
+                    {period.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="text-right">
             <div className="text-2xl font-bold tabular-nums">
               {formatPrivateAmount(currentNetWorth, isPrivate)}

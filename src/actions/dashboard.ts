@@ -235,34 +235,82 @@ export async function getCurrentMonthSpending() {
     return { error: "Unauthorized" };
   }
 
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-  const { data: transactions, error } = await supabase
+  // Fetch current month spending
+  const { data: currentMonthTxns, error: currentError } = await supabase
     .from("transactions")
     .select("amount, date")
     .eq("user_id", user.id)
     .gte("date", startOfMonth.toISOString().split("T")[0])
-    .gt("amount", 0) // Only expenses (positive in Plaid = money out)
+    .gt("amount", 0)
     .order("date", { ascending: true })
     .returns<SpendingByDateRow[]>();
 
-  if (error) {
+  // Fetch last month spending
+  const { data: lastMonthTxns, error: lastError } = await supabase
+    .from("transactions")
+    .select("amount, date")
+    .eq("user_id", user.id)
+    .gte("date", startOfLastMonth.toISOString().split("T")[0])
+    .lte("date", endOfLastMonth.toISOString().split("T")[0])
+    .gt("amount", 0)
+    .order("date", { ascending: true })
+    .returns<SpendingByDateRow[]>();
+
+  if (currentError || lastError) {
     return { error: "Failed to fetch spending data" };
   }
 
-  // Group by date
-  const dailyTotals: Record<string, number> = {};
-
-  (transactions || []).forEach((txn) => {
-    dailyTotals[txn.date] = (dailyTotals[txn.date] || 0) + txn.amount;
+  // Group current month by day of month
+  const currentDailyTotals: Record<number, number> = {};
+  (currentMonthTxns || []).forEach((txn) => {
+    const day = new Date(txn.date).getDate();
+    currentDailyTotals[day] = (currentDailyTotals[day] || 0) + txn.amount;
   });
 
-  // Convert to array sorted by date
-  const spendingHistory = Object.entries(dailyTotals)
-    .map(([date, amount]) => ({ date, amount }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+  // Group last month by day of month
+  const lastDailyTotals: Record<number, number> = {};
+  (lastMonthTxns || []).forEach((txn) => {
+    const day = new Date(txn.date).getDate();
+    lastDailyTotals[day] = (lastDailyTotals[day] || 0) + txn.amount;
+  });
 
-  return { spendingHistory };
+  // Build cumulative spending arrays
+  const daysInCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysInLastMonth = endOfLastMonth.getDate();
+  const currentDayOfMonth = now.getDate();
+
+  const spendingHistory: { date: string; amount: number }[] = [];
+  const lastMonthHistory: { day: number; amount: number }[] = [];
+
+  // Current month - only up to today
+  let currentCumulative = 0;
+  for (let day = 1; day <= currentDayOfMonth; day++) {
+    currentCumulative += currentDailyTotals[day] || 0;
+    spendingHistory.push({
+      date: new Date(now.getFullYear(), now.getMonth(), day).toISOString().split("T")[0],
+      amount: currentCumulative,
+    });
+  }
+
+  // Last month - full month
+  let lastCumulative = 0;
+  for (let day = 1; day <= daysInLastMonth; day++) {
+    lastCumulative += lastDailyTotals[day] || 0;
+    lastMonthHistory.push({
+      day,
+      amount: lastCumulative,
+    });
+  }
+
+  return {
+    spendingHistory,
+    lastMonthHistory,
+    currentMonthTotal: currentCumulative,
+    lastMonthTotal: lastCumulative,
+  };
 }

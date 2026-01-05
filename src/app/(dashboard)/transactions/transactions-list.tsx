@@ -34,6 +34,9 @@ interface Transaction {
     name: string;
     mask: string | null;
     type: string;
+    plaid_item: {
+      institution_logo: string | null;
+    } | null;
   } | null;
   category: {
     name: string;
@@ -263,9 +266,17 @@ export function TransactionsList({
                           </Select>
                         </div>
 
-                        {/* Account with colored dot */}
+                        {/* Account with institution logo */}
                         <div className="flex items-center gap-2 w-48 shrink-0">
-                          <div className={`h-2.5 w-2.5 rounded-full ${accountColor} shrink-0`} />
+                          {txn.account?.plaid_item?.institution_logo ? (
+                            <img
+                              src={`data:image/png;base64,${txn.account.plaid_item.institution_logo}`}
+                              alt=""
+                              className="h-5 w-5 rounded-full object-cover shrink-0"
+                            />
+                          ) : (
+                            <div className={`h-5 w-5 rounded-full ${accountColor} shrink-0`} />
+                          )}
                           <span className="text-sm text-muted-foreground truncate">
                             {txn.account?.name || "Unknown"}
                           </span>

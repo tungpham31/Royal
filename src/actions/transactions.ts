@@ -43,7 +43,7 @@ export async function getTransactions({
       plaid_category_primary,
       plaid_category_detailed,
       logo_url,
-      account:accounts(name, mask, type),
+      account:accounts(name, mask, type, plaid_item:plaid_items(institution_logo)),
       category:categories(name, icon, color)
     `, { count: "exact" })
     .eq("user_id", user.id);

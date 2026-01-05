@@ -8,7 +8,7 @@ import {
 } from "@/actions/reports";
 import { IncomeExpenseChart } from "./income-expense-chart";
 import { SpendingPieChart } from "./spending-pie-chart";
-import { BarChart3, PieChart, Store } from "lucide-react";
+import { BarChart3, PieChart, Store, TrendingUp, TrendingDown, Wallet, Percent } from "lucide-react";
 
 export default async function ReportsPage() {
   const [categoryResult, monthlyResult, merchantsResult] = await Promise.all([
@@ -23,11 +23,66 @@ export default async function ReportsPage() {
 
   const totalSpending = categories.reduce((sum, cat) => sum + cat.total, 0);
 
+  // Get current month's data for summary cards
+  const currentMonth = monthlyData[monthlyData.length - 1];
+  const totalIncome = currentMonth?.income || 0;
+  const totalExpenses = currentMonth?.expenses || 0;
+  const netIncome = totalIncome - totalExpenses;
+  const savingsRate = totalIncome > 0 ? ((netIncome / totalIncome) * 100) : 0;
+
   return (
     <>
       <Header title="Reports" description="Analyze your spending patterns" />
 
       <div className="p-6 space-y-6">
+        {/* Summary Cards */}
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                <TrendingUp className="h-4 w-4" />
+                <span className="text-sm font-medium">Total Income</span>
+              </div>
+              <div className="text-2xl font-bold tabular-nums">
+                <PrivateAmount amount={totalIncome} />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                <TrendingDown className="h-4 w-4" />
+                <span className="text-sm font-medium">Total Expenses</span>
+              </div>
+              <div className="text-2xl font-bold tabular-nums">
+                <PrivateAmount amount={totalExpenses} />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                <Wallet className="h-4 w-4" />
+                <span className="text-sm font-medium">Net Income</span>
+              </div>
+              <div className="text-2xl font-bold tabular-nums">
+                <PrivateAmount amount={netIncome} />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                <Percent className="h-4 w-4" />
+                <span className="text-sm font-medium">Savings Rate</span>
+              </div>
+              <div className="text-2xl font-bold tabular-nums">
+                {savingsRate.toFixed(1)}%
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Income vs Expenses Chart */}
         <Card>
           <CardHeader>
