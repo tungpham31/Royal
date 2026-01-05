@@ -225,8 +225,8 @@ export function TransactionsList({
                           </div>
                         )}
 
-                        {/* Merchant name - flexible width like Monarch */}
-                        <div className="flex-1 min-w-0">
+                        {/* Merchant name */}
+                        <div className="w-56 min-w-0 shrink-0">
                           <p className="font-medium truncate">{merchantName}</p>
                           {txn.pending && (
                             <Badge variant="outline" className="text-xs mt-0.5">
@@ -236,7 +236,7 @@ export function TransactionsList({
                         </div>
 
                         {/* Category with emoji */}
-                        <div className="flex items-center gap-2 w-44 shrink-0">
+                        <div className="flex items-center gap-2 w-48 shrink-0">
                           <span className="text-base">{categoryEmoji}</span>
                           <Select
                             value={txn.category?.name || "none"}
@@ -264,7 +264,7 @@ export function TransactionsList({
                         </div>
 
                         {/* Account with colored dot */}
-                        <div className="flex items-center gap-2 w-44 shrink-0">
+                        <div className="flex items-center gap-2 w-48 shrink-0">
                           <div className={`h-2.5 w-2.5 rounded-full ${accountColor} shrink-0`} />
                           <span className="text-sm text-muted-foreground truncate">
                             {txn.account?.name || "Unknown"}
