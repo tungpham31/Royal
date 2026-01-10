@@ -193,3 +193,70 @@ export async function syncPlaidItem(
     };
   }
 }
+
+/**
+ * Record a net worth snapshot for a user
+ * Uses upsert to ensure only one record per user per day (UTC)
+ */
+export async function recordNetWorthSnapshotForUser(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Get all accounts for this user
+    const { data: accounts, error: fetchError } = await supabase
+      .from("accounts")
+      .select("type, current_balance")
+      .eq("user_id", userId)
+      .returns<{ type: string; current_balance: number | null }[]>();
+
+    if (fetchError) {
+      console.error(`[NetWorth ${userId}] Error fetching accounts:`, fetchError);
+      return { success: false, error: fetchError.message };
+    }
+
+    let totalAssets = 0;
+    let totalLiabilities = 0;
+
+    (accounts || []).forEach((account) => {
+      const balance = account.current_balance || 0;
+      if (account.type === "credit" || account.type === "loan") {
+        totalLiabilities += Math.abs(balance);
+      } else {
+        totalAssets += balance;
+      }
+    });
+
+    const today = new Date().toISOString().split("T")[0];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: upsertError } = await (supabase as any)
+      .from("net_worth_history")
+      .upsert(
+        {
+          user_id: userId,
+          date: today,
+          total_assets: totalAssets,
+          total_liabilities: totalLiabilities,
+          net_worth: totalAssets - totalLiabilities,
+        },
+        { onConflict: "user_id,date" }
+      );
+
+    if (upsertError) {
+      console.error(`[NetWorth ${userId}] Error upserting:`, upsertError);
+      return { success: false, error: upsertError.message };
+    }
+
+    console.log(
+      `[NetWorth ${userId}] Recorded: assets=${totalAssets}, liabilities=${totalLiabilities}, net=${totalAssets - totalLiabilities}`
+    );
+    return { success: true };
+  } catch (error) {
+    console.error(`[NetWorth ${userId}] Error:`, error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}

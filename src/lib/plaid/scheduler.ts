@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import { createClient } from "@supabase/supabase-js";
-import { syncPlaidItem } from "./sync";
+import { syncPlaidItem, recordNetWorthSnapshotForUser } from "./sync";
 
 interface PlaidItemRow {
   id: string;
@@ -62,6 +62,16 @@ async function runSync() {
     }
 
     console.log(`[Cron] Sync complete. Successful: ${successful}, Failed: ${failed}`);
+
+    // Record net worth snapshots for all users that were synced
+    const userIds = [...new Set(plaidItems.map((item) => item.user_id))];
+    console.log(`[Cron] Recording net worth for ${userIds.length} users...`);
+
+    for (const userId of userIds) {
+      await recordNetWorthSnapshotForUser(supabase, userId);
+    }
+
+    console.log("[Cron] Net worth snapshots recorded");
   } catch (error) {
     console.error("[Cron] Unexpected error during sync:", error);
   }

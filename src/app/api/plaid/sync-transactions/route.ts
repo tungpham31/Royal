@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { syncPlaidItem } from "@/lib/plaid/sync";
+import { syncPlaidItem, recordNetWorthSnapshotForUser } from "@/lib/plaid/sync";
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,6 +40,9 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Record net worth snapshot after successful sync
+    await recordNetWorthSnapshotForUser(supabase, user.id);
 
     return NextResponse.json({
       success: true,
