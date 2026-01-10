@@ -1,9 +1,10 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { formatPrivateAmount } from "@/lib/utils";
 import { usePrivacyStore } from "@/lib/stores/privacy-store";
 
@@ -126,8 +127,14 @@ export function CashFlowClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isPrivate } = usePrivacyStore();
+  const [isLoading, setIsLoading] = useState(false);
 
   const timeFrame = (searchParams.get("timeframe") as TimeFrame) || "monthly";
+
+  const navigateWithLoading = (url: string) => {
+    setIsLoading(true);
+    router.push(url);
+  };
 
   const handlePreviousMonth = () => {
     let newMonth = currentMonth - 1;
@@ -136,7 +143,7 @@ export function CashFlowClient({
       newMonth = 12;
       newYear -= 1;
     }
-    router.push(`/cash-flow?month=${newMonth}&year=${newYear}&timeframe=${timeFrame}`);
+    navigateWithLoading(`/cash-flow?month=${newMonth}&year=${newYear}&timeframe=${timeFrame}`);
   };
 
   const handleNextMonth = () => {
@@ -146,11 +153,11 @@ export function CashFlowClient({
       newMonth = 1;
       newYear += 1;
     }
-    router.push(`/cash-flow?month=${newMonth}&year=${newYear}&timeframe=${timeFrame}`);
+    navigateWithLoading(`/cash-flow?month=${newMonth}&year=${newYear}&timeframe=${timeFrame}`);
   };
 
   const handleTimeFrameChange = (newTimeFrame: TimeFrame) => {
-    router.push(`/cash-flow?month=${currentMonth}&year=${currentYear}&timeframe=${newTimeFrame}`);
+    navigateWithLoading(`/cash-flow?month=${currentMonth}&year=${currentYear}&timeframe=${newTimeFrame}`);
   };
 
   const formatCategory = (category: string) => {
@@ -180,6 +187,16 @@ export function CashFlowClient({
 
   return (
     <div className="space-y-6">
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-background/60 z-50 flex items-center justify-center">
+          <div className="flex items-center gap-3 bg-card px-6 py-4 rounded-lg shadow-lg border">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <span className="text-sm font-medium">Loading...</span>
+          </div>
+        </div>
+      )}
+
       {/* Time Period Toggle */}
       <div className="flex items-center justify-end">
         <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
@@ -188,6 +205,7 @@ export function CashFlowClient({
             size="sm"
             onClick={() => handleTimeFrameChange("monthly")}
             className="px-4"
+            disabled={isLoading}
           >
             Monthly
           </Button>
@@ -195,6 +213,7 @@ export function CashFlowClient({
             variant={timeFrame === "quarterly" ? "default" : "ghost"}
             size="sm"
             onClick={() => handleTimeFrameChange("quarterly")}
+            disabled={isLoading}
             className="px-4"
           >
             Quarterly
@@ -204,6 +223,7 @@ export function CashFlowClient({
             size="sm"
             onClick={() => handleTimeFrameChange("yearly")}
             className="px-4"
+            disabled={isLoading}
           >
             Yearly
           </Button>
@@ -283,13 +303,13 @@ export function CashFlowClient({
       {/* Month Navigator */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
+          <Button variant="outline" size="icon" onClick={handlePreviousMonth} disabled={isLoading}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <h2 className="text-xl font-semibold min-w-[180px] text-center">
             {MONTH_NAMES[currentMonth - 1]} {currentYear}
           </h2>
-          <Button variant="outline" size="icon" onClick={handleNextMonth}>
+          <Button variant="outline" size="icon" onClick={handleNextMonth} disabled={isLoading}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>

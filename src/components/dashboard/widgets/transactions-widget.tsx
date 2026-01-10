@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { formatPrivateAmount, formatDate } from "@/lib/utils";
 import { usePrivacyStore } from "@/lib/stores/privacy-store";
 import {
-  ArrowRightLeft,
   Utensils,
   Car,
   ShoppingBag,
@@ -122,10 +121,7 @@ export function TransactionsWidget({ transactions }: TransactionsWidgetProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="flex items-center gap-2">
-          <ArrowRightLeft className="h-5 w-5" />
-          Recent Transactions
-        </CardTitle>
+        <CardTitle>Recent Transactions</CardTitle>
         {transactions.length > 0 && (
           <Button variant="ghost" size="sm" asChild>
             <Link href="/transactions">View all</Link>

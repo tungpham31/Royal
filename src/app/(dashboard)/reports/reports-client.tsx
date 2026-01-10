@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import {
   Percent,
   ChevronDown,
   Calendar,
+  Loader2,
 } from "lucide-react";
 
 interface CategoryData {
@@ -72,26 +74,42 @@ export function ReportsClient({
 }: ReportsClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isLoading, setIsLoading] = useState(false);
 
   const netIncome = totalIncome - totalExpenses;
   const savingsRate = totalIncome > 0 ? (netIncome / totalIncome) * 100 : 0;
 
+  const navigateWithLoading = (url: string) => {
+    setIsLoading(true);
+    router.push(url);
+  };
+
   const handleTabChange = (tab: "spending" | "income") => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tab);
-    router.push(`/reports?${params.toString()}`);
+    navigateWithLoading(`/reports?${params.toString()}`);
   };
 
   const handlePeriodChange = (period: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("period", period);
-    router.push(`/reports?${params.toString()}`);
+    navigateWithLoading(`/reports?${params.toString()}`);
   };
 
   const currentPeriodLabel = PERIODS.find((p) => p.value === currentPeriod)?.label || "This month";
 
   return (
     <div className="space-y-6">
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-background/60 z-50 flex items-center justify-center">
+          <div className="flex items-center gap-3 bg-card px-6 py-4 rounded-lg shadow-lg border">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <span className="text-sm font-medium">Loading...</span>
+          </div>
+        </div>
+      )}
+
       {/* Tab Navigation and Date Range */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
@@ -100,6 +118,7 @@ export function ReportsClient({
             size="sm"
             onClick={() => handleTabChange("spending")}
             className="px-4"
+            disabled={isLoading}
           >
             Spending
           </Button>
@@ -108,6 +127,7 @@ export function ReportsClient({
             size="sm"
             onClick={() => handleTabChange("income")}
             className="px-4"
+            disabled={isLoading}
           >
             Income
           </Button>
@@ -115,8 +135,12 @@ export function ReportsClient({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Calendar className="h-4 w-4" />
+            <Button variant="outline" className="gap-2" disabled={isLoading}>
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Calendar className="h-4 w-4" />
+              )}
               {currentPeriodLabel}
               <ChevronDown className="h-4 w-4" />
             </Button>
