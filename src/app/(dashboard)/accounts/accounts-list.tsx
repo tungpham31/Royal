@@ -21,6 +21,7 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { formatPrivateAmount, cn } from "@/lib/utils";
+import { getAccountDisplayName } from "@/lib/account-utils";
 import { usePrivacyStore } from "@/lib/stores/privacy-store";
 import { SortableAccountGroup } from "./sortable-account-group";
 import { SortableAccountItem } from "./sortable-account-item";
@@ -29,6 +30,7 @@ import { toggleAccountHidden } from "@/actions/accounts";
 interface Account {
   id: string;
   name: string;
+  nickname?: string | null;
   official_name: string | null;
   type: string;
   subtype: string | null;
@@ -325,7 +327,7 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
                                   </div>
                                 )}
                                 <div>
-                                  <p className="font-medium text-base">{account.name}</p>
+                                  <p className="font-medium text-base">{getAccountDisplayName(account)}</p>
                                   <p className="text-sm text-muted-foreground">
                                     {account.subtype ? (
                                       <span className="capitalize">{account.subtype}</span>
@@ -421,7 +423,7 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
                                     </div>
                                   )}
                                   <div>
-                                    <p className="font-medium text-base">{account.name}</p>
+                                    <p className="font-medium text-base">{getAccountDisplayName(account)}</p>
                                     <p className="text-sm text-muted-foreground">
                                       {account.subtype ? (
                                         <span className="capitalize">{account.subtype}</span>

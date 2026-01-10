@@ -12,10 +12,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, X, ArrowUpDown } from "lucide-react";
+import { getAccountDisplayName } from "@/lib/account-utils";
 
 interface Account {
   id: string;
   name: string;
+  nickname?: string | null;
   mask: string | null;
 }
 
@@ -130,7 +132,7 @@ export function TransactionsFilters({
           <SelectItem value="all">All Accounts</SelectItem>
           {accounts.map((account) => (
             <SelectItem key={account.id} value={account.id}>
-              {account.name} {account.mask && `(••${account.mask})`}
+              {getAccountDisplayName(account)} {account.mask && `(••${account.mask})`}
             </SelectItem>
           ))}
         </SelectContent>

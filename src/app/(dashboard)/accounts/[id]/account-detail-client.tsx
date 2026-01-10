@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -11,7 +13,8 @@ import {
 } from "@/components/ui/select";
 import { formatPrivateAmount, MASKED_AMOUNT_SHORT } from "@/lib/utils";
 import { usePrivacyStore } from "@/lib/stores/privacy-store";
-import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { updateAccountNickname } from "@/actions/accounts";
+import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Pencil, Check, X } from "lucide-react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -35,6 +38,7 @@ interface Transaction {
 interface Account {
   id: string;
   name: string;
+  nickname?: string | null;
   official_name: string | null;
   type: string;
   subtype: string | null;
@@ -91,6 +95,21 @@ function groupTransactionsByDate(transactions: Transaction[]) {
 export function AccountDetailClient({ account, transactionCount }: AccountDetailClientProps) {
   const { isPrivate } = usePrivacyStore();
   const [timePeriod, setTimePeriod] = useState<TimePeriod>("1M");
+  const [isEditingNickname, setIsEditingNickname] = useState(false);
+  const [nickname, setNickname] = useState(account.nickname || "");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSaveNickname = async () => {
+    setIsSaving(true);
+    await updateAccountNickname(account.id, nickname || null);
+    setIsSaving(false);
+    setIsEditingNickname(false);
+  };
+
+  const handleCancelNickname = () => {
+    setNickname(account.nickname || "");
+    setIsEditingNickname(false);
+  };
 
   const transactions = account.transactions || [];
   const institutionName = account.plaid_item?.institution_name || "Manual";
@@ -329,6 +348,74 @@ export function AccountDetailClient({ account, transactionCount }: AccountDetail
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Total transactions</span>
               <span className="font-medium tabular-nums">{transactionCount}</span>
+            </div>
+
+            {/* Nickname editing */}
+            <div className="border-t pt-4 mt-4">
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span className="text-muted-foreground">Nickname</span>
+                {!isEditingNickname && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => setIsEditingNickname(true)}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+              {isEditingNickname ? (
+                <div className="space-y-2">
+                  <Input
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    placeholder={account.name}
+                    className="h-8 text-sm"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveNickname();
+                      if (e.key === "Escape") handleCancelNickname();
+                    }}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="h-7 flex-1"
+                      onClick={handleSaveNickname}
+                      disabled={isSaving}
+                    >
+                      <Check className="h-3 w-3 mr-1" />
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 flex-1"
+                      onClick={handleCancelNickname}
+                      disabled={isSaving}
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm">
+                  {account.nickname ? (
+                    <div>
+                      <span className="font-medium">{account.nickname}</span>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Original: {account.name}
+                      </p>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground italic">
+                      Using original name
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="border-t pt-4 mt-4">

@@ -2,6 +2,7 @@ import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PrivateAmount } from "@/components/ui/private-amount";
 import { getInvestmentAccounts, getInvestmentHoldings } from "@/actions/investments";
+import { getAccountDisplayName } from "@/lib/account-utils";
 import { TrendingUp, TrendingDown, PieChart, Building2 } from "lucide-react";
 import { PlaidLinkButton } from "@/components/plaid/plaid-link";
 
@@ -105,7 +106,7 @@ export default async function InvestmentsPage() {
                         <TrendingUp className="h-5 w-5 text-muted-foreground" />
                       </div>
                       <div>
-                        <p className="font-medium">{account.name}</p>
+                        <p className="font-medium">{getAccountDisplayName(account)}</p>
                         <p className="text-sm text-muted-foreground">
                           {account.plaid_item?.institution_name}
                           {account.mask && ` • ••${account.mask}`}

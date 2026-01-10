@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getAccountById } from "@/actions/accounts";
+import { getAccountDisplayName } from "@/lib/account-utils";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronRight } from "lucide-react";
@@ -40,7 +41,7 @@ export default async function AccountDetailPage({ params }: AccountDetailPagePro
                   className="h-6 w-6 rounded-full object-contain"
                 />
               ) : null}
-              <span>{account.name}</span>
+              <span>{getAccountDisplayName(account)}</span>
             </div>
           </div>
         }

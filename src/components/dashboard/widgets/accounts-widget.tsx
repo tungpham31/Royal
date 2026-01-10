@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
+import { getAccountDisplayName } from "@/lib/account-utils";
 import {
   Wallet,
   CreditCard,
@@ -16,6 +17,7 @@ import { PlaidLinkButton } from "@/components/plaid/plaid-link";
 interface Account {
   id: string;
   name: string;
+  nickname?: string | null;
   type: string;
   current_balance: number | null;
   plaid_item?: {
@@ -68,7 +70,7 @@ export function AccountsWidget({ accounts }: AccountsWidgetProps) {
                     {accountTypeIcons[account.type] || accountTypeIcons.other}
                   </div>
                   <div>
-                    <p className="font-medium">{account.name}</p>
+                    <p className="font-medium">{getAccountDisplayName(account)}</p>
                     <p className="text-sm text-muted-foreground">
                       {account.plaid_item?.institution_name}
                     </p>

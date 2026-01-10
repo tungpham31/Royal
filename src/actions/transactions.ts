@@ -40,7 +40,8 @@ export async function getTransactions({
       .from("accounts")
       .select("id")
       .eq("user_id", user.id)
-      .eq("is_hidden", true);
+      .eq("is_hidden", true)
+      .returns<{ id: string }[]>();
 
     hiddenAccountIds = (hiddenAccounts || []).map((a) => a.id);
   }

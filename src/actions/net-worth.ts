@@ -7,6 +7,7 @@ interface NetWorthAccountRow {
   subtype: string | null;
   current_balance: number | null;
   name: string;
+  nickname: string | null;
 }
 
 interface NetWorthHistoryRow {
@@ -29,7 +30,7 @@ export async function getNetWorthSummary() {
 
   const { data: accounts, error } = await supabase
     .from("accounts")
-    .select("type, subtype, current_balance, name")
+    .select("type, subtype, current_balance, name, nickname")
     .eq("user_id", user.id)
     .returns<NetWorthAccountRow[]>();
 
@@ -52,14 +53,14 @@ export async function getNetWorthSummary() {
         liabilitiesByType[type] = { total: 0, accounts: [] };
       }
       liabilitiesByType[type].total += Math.abs(balance);
-      liabilitiesByType[type].accounts.push({ name: account.name, balance: Math.abs(balance) });
+      liabilitiesByType[type].accounts.push({ name: account.nickname || account.name, balance: Math.abs(balance) });
     } else {
       totalAssets += balance;
       if (!assetsByType[type]) {
         assetsByType[type] = { total: 0, accounts: [] };
       }
       assetsByType[type].total += balance;
-      assetsByType[type].accounts.push({ name: account.name, balance });
+      assetsByType[type].accounts.push({ name: account.nickname || account.name, balance });
     }
   });
 

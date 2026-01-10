@@ -9,6 +9,7 @@ interface AccountWithPlaidItem {
   plaid_item_id: string | null;
   plaid_account_id: string | null;
   name: string;
+  nickname: string | null;
   official_name: string | null;
   mask: string | null;
   type: string;
@@ -238,7 +239,7 @@ export async function toggleAccountHidden(accountId: string) {
     .select("is_hidden")
     .eq("id", accountId)
     .eq("user_id", user.id)
-    .single();
+    .single<{ is_hidden: boolean }>();
 
   if (fetchError || !account) {
     console.error("Error fetching account:", fetchError);
@@ -246,7 +247,8 @@ export async function toggleAccountHidden(accountId: string) {
   }
 
   // Toggle the hidden status
-  const { error: updateError } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: updateError } = await (supabase as any)
     .from("accounts")
     .update({ is_hidden: !account.is_hidden })
     .eq("id", accountId)
@@ -260,4 +262,35 @@ export async function toggleAccountHidden(accountId: string) {
   revalidatePath("/accounts");
   revalidatePath("/transactions");
   return { success: true, is_hidden: !account.is_hidden };
+}
+
+export async function updateAccountNickname(accountId: string, nickname: string | null) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  // Trim and normalize empty string to null
+  const normalizedNickname = nickname?.trim() || null;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: updateError } = await (supabase as any)
+    .from("accounts")
+    .update({ nickname: normalizedNickname })
+    .eq("id", accountId)
+    .eq("user_id", user.id);
+
+  if (updateError) {
+    console.error("Error updating account nickname:", updateError);
+    return { error: "Failed to update nickname" };
+  }
+
+  revalidatePath("/accounts");
+  revalidatePath("/dashboard");
+  revalidatePath("/transactions");
+  revalidatePath("/investments");
+  revalidatePath("/net-worth");
+  return { success: true, nickname: normalizedNickname };
 }
