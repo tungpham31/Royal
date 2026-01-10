@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState, useEffect, useId } from "react";
 import {
   DndContext,
   closestCenter,
@@ -33,6 +33,14 @@ export function SortableAccountGroup<T extends Account>({
   onReorder,
   children,
 }: SortableAccountGroupProps<T>) {
+  // Use a stable ID to avoid hydration mismatch
+  const dndContextId = useId();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -69,8 +77,14 @@ export function SortableAccountGroup<T extends Account>({
     [accounts, onReorder]
   );
 
+  // Render children without DnD on server to avoid hydration mismatch
+  if (!isMounted) {
+    return <>{children}</>;
+  }
+
   return (
     <DndContext
+      id={dndContextId}
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
