@@ -256,7 +256,7 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
                     )}
                   </Button>
                   <div>
-                    <CardTitle className="text-lg">
+                    <CardTitle className="text-lg font-semibold">
                       {accountTypeLabels[type] || type}
                     </CardTitle>
                     {typeChange && (
