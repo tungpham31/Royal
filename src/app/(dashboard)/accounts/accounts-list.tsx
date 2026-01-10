@@ -5,16 +5,26 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   TrendingUp,
   TrendingDown,
   ChevronDown,
   ChevronRight,
   Building2,
+  EyeOff,
+  Eye,
+  MoreHorizontal,
 } from "lucide-react";
-import { formatPrivateAmount } from "@/lib/utils";
+import { formatPrivateAmount, cn } from "@/lib/utils";
 import { usePrivacyStore } from "@/lib/stores/privacy-store";
 import { SortableAccountGroup } from "./sortable-account-group";
 import { SortableAccountItem } from "./sortable-account-item";
+import { toggleAccountHidden } from "@/actions/accounts";
 
 interface Account {
   id: string;
@@ -27,6 +37,7 @@ interface Account {
   available_balance: number | null;
   currency: string;
   display_order?: number;
+  is_hidden?: boolean;
   updated_at: string;
   plaid_item?: {
     institution_name: string;
@@ -96,6 +107,7 @@ function getInstitutionInitial(name: string): string {
 export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) {
   const { isPrivate } = usePrivacyStore();
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set());
+  const [showHiddenByType, setShowHiddenByType] = useState<Set<string>>(new Set());
 
   // Helper to group and sort accounts by type and display_order
   const groupAccountsByType = (accountsList: Account[]) => {
@@ -106,9 +118,15 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
       return acc;
     }, {} as Record<string, Account[]>);
 
-    // Sort accounts within each type by display_order
+    // Sort accounts within each type by display_order, with hidden accounts at the end
     Object.keys(grouped).forEach((type) => {
-      grouped[type].sort((a, b) => (a.display_order ?? 999) - (b.display_order ?? 999));
+      grouped[type].sort((a, b) => {
+        // Hidden accounts go to the end
+        if (a.is_hidden && !b.is_hidden) return 1;
+        if (!a.is_hidden && b.is_hidden) return -1;
+        // Then sort by display_order
+        return (a.display_order ?? 999) - (b.display_order ?? 999);
+      });
     });
 
     return grouped;
@@ -132,6 +150,26 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
     }));
   }, []);
 
+  // Toggle showing hidden accounts for a type
+  const toggleShowHidden = (type: string) => {
+    setShowHiddenByType((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(type)) {
+        newSet.delete(type);
+      } else {
+        newSet.add(type);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle hiding/unhiding an account
+  const handleToggleHidden = async (e: React.MouseEvent, accountId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await toggleAccountHidden(accountId);
+  };
+
   // Sort types by defined order
   const sortedTypes = Object.keys(accountsByType).sort((a, b) => {
     const indexA = ACCOUNT_TYPE_ORDER.indexOf(a);
@@ -140,14 +178,16 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
   });
 
   const getTypeTotal = (accounts: Account[], type: string) => {
-    return accounts.reduce((total, account) => {
-      const balance = account.current_balance || 0;
-      // Credit and loan balances are liabilities (show as negative)
-      if (type === "credit" || type === "loan") {
-        return total - Math.abs(balance);
-      }
-      return total + balance;
-    }, 0);
+    return accounts
+      .filter((account) => !account.is_hidden)
+      .reduce((total, account) => {
+        const balance = account.current_balance || 0;
+        // Credit and loan balances are liabilities (show as negative)
+        if (type === "credit" || type === "loan") {
+          return total - Math.abs(balance);
+        }
+        return total + balance;
+      }, 0);
   };
 
   const getTypeChange = (type: string) => {
@@ -216,71 +256,197 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
                 </span>
               </div>
             </CardHeader>
-            {!isCollapsed && (
-              <CardContent className="pt-0 pl-10">
-                <SortableAccountGroup
-                  accounts={typeAccounts}
-                  onReorder={(newAccounts) => handleReorder(type, newAccounts)}
-                >
-                  <div className="divide-y">
-                    {typeAccounts.map((account) => {
-                      const institutionName = account.plaid_item?.institution_name || "Manual";
-                      const institutionLogo = account.plaid_item?.institution_logo;
-                      const balance = account.current_balance || 0;
-                      const displayBalance = isLiability ? -Math.abs(balance) : balance;
+            {!isCollapsed && (() => {
+              const visibleAccounts = typeAccounts.filter((a) => !a.is_hidden);
+              const hiddenAccounts = typeAccounts.filter((a) => a.is_hidden);
+              const showHidden = showHiddenByType.has(type);
 
-                      return (
-                        <SortableAccountItem key={account.id} id={account.id}>
-                          <Link
-                            href={`/accounts/${account.id}`}
-                            className="flex items-center justify-between py-4 -mx-3 px-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                          >
-                            <div className="flex items-center gap-4">
-                              {/* Institution logo */}
-                              {institutionLogo ? (
-                                <img
-                                  src={`data:image/png;base64,${institutionLogo}`}
-                                  alt={institutionName}
-                                  className="h-11 w-11 rounded-full object-contain"
-                                />
-                              ) : (
-                                <div
-                                  className={`flex h-11 w-11 items-center justify-center rounded-full text-white font-medium ${getInstitutionColor(institutionName)}`}
-                                >
-                                  {institutionName === "Manual" ? (
-                                    <Building2 className="h-5 w-5" />
-                                  ) : (
-                                    getInstitutionInitial(institutionName)
-                                  )}
+              return (
+                <CardContent className="pt-0 pl-10">
+                  <SortableAccountGroup
+                    accounts={visibleAccounts}
+                    onReorder={(newAccounts) => handleReorder(type, newAccounts)}
+                  >
+                    <div className="divide-y">
+                      {visibleAccounts.map((account) => {
+                        const institutionName = account.plaid_item?.institution_name || "Manual";
+                        const institutionLogo = account.plaid_item?.institution_logo;
+                        const balance = account.current_balance || 0;
+                        const displayBalance = isLiability ? -Math.abs(balance) : balance;
+
+                        return (
+                          <SortableAccountItem key={account.id} id={account.id}>
+                            <div className="flex items-center justify-between py-4 -mx-3 px-3 rounded-lg hover:bg-muted/50 transition-colors group/row">
+                              <Link
+                                href={`/accounts/${account.id}`}
+                                className="flex items-center gap-4 flex-1 min-w-0"
+                              >
+                                {/* Institution logo */}
+                                {institutionLogo ? (
+                                  <img
+                                    src={`data:image/png;base64,${institutionLogo}`}
+                                    alt={institutionName}
+                                    className="h-11 w-11 rounded-full object-contain"
+                                  />
+                                ) : (
+                                  <div
+                                    className={`flex h-11 w-11 items-center justify-center rounded-full text-white font-medium ${getInstitutionColor(institutionName)}`}
+                                  >
+                                    {institutionName === "Manual" ? (
+                                      <Building2 className="h-5 w-5" />
+                                    ) : (
+                                      getInstitutionInitial(institutionName)
+                                    )}
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="font-medium text-base">{account.name}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {account.subtype ? (
+                                      <span className="capitalize">{account.subtype}</span>
+                                    ) : (
+                                      <span>{institutionName}</span>
+                                    )}
+                                  </p>
                                 </div>
-                              )}
-                              <div>
-                                <p className="font-medium text-base">{account.name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {account.subtype ? (
-                                    <span className="capitalize">{account.subtype}</span>
-                                  ) : (
-                                    <span>{institutionName}</span>
-                                  )}
-                                </p>
+                              </Link>
+                              <div className="flex items-center gap-2">
+                                <Link href={`/accounts/${account.id}`} className="text-right">
+                                  <p className="font-semibold text-base tabular-nums">
+                                    {formatPrivateAmount(displayBalance, isPrivate)}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {getRelativeTime(account.updated_at)}
+                                  </p>
+                                </Link>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 opacity-0 group-hover/row:opacity-100 transition-opacity"
+                                      onClick={(e) => e.preventDefault()}
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={(e) => handleToggleHidden(e, account.id)}>
+                                      <EyeOff className="h-4 w-4 mr-2" />
+                                      Hide account
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="font-semibold text-base tabular-nums">
-                                {formatPrivateAmount(displayBalance, isPrivate)}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {getRelativeTime(account.updated_at)}
-                              </p>
-                            </div>
-                          </Link>
-                        </SortableAccountItem>
-                      );
-                    })}
-                  </div>
-                </SortableAccountGroup>
-              </CardContent>
-            )}
+                          </SortableAccountItem>
+                        );
+                      })}
+                    </div>
+                  </SortableAccountGroup>
+
+                  {/* Hidden accounts section */}
+                  {hiddenAccounts.length > 0 && (
+                    <div className="mt-2">
+                      <button
+                        onClick={() => toggleShowHidden(type)}
+                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                      >
+                        <EyeOff className="h-4 w-4" />
+                        {showHidden ? "Collapse" : "Show"} {hiddenAccounts.length} hidden account{hiddenAccounts.length > 1 ? "s" : ""}
+                      </button>
+
+                      {showHidden && (
+                        <div className="divide-y">
+                          {hiddenAccounts.map((account) => {
+                            const institutionName = account.plaid_item?.institution_name || "Manual";
+                            const institutionLogo = account.plaid_item?.institution_logo;
+                            const balance = account.current_balance || 0;
+                            const displayBalance = isLiability ? -Math.abs(balance) : balance;
+
+                            return (
+                              <div
+                                key={account.id}
+                                className="flex items-center justify-between py-4 -mx-3 px-3 rounded-lg hover:bg-muted/50 transition-colors opacity-60 group/row"
+                              >
+                                <Link
+                                  href={`/accounts/${account.id}`}
+                                  className="flex items-center gap-4 flex-1 min-w-0"
+                                >
+                                  {/* Institution logo */}
+                                  {institutionLogo ? (
+                                    <img
+                                      src={`data:image/png;base64,${institutionLogo}`}
+                                      alt={institutionName}
+                                      className="h-11 w-11 rounded-full object-contain grayscale"
+                                    />
+                                  ) : (
+                                    <div
+                                      className={cn(
+                                        "flex h-11 w-11 items-center justify-center rounded-full text-white font-medium",
+                                        getInstitutionColor(institutionName),
+                                        "grayscale"
+                                      )}
+                                    >
+                                      {institutionName === "Manual" ? (
+                                        <Building2 className="h-5 w-5" />
+                                      ) : (
+                                        getInstitutionInitial(institutionName)
+                                      )}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="font-medium text-base">{account.name}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {account.subtype ? (
+                                        <span className="capitalize">{account.subtype}</span>
+                                      ) : (
+                                        <span>{institutionName}</span>
+                                      )}
+                                    </p>
+                                  </div>
+                                </Link>
+                                <div className="flex items-center gap-2">
+                                  <Link href={`/accounts/${account.id}`} className="text-right flex items-center gap-2">
+                                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                    <div>
+                                      <p className="font-semibold text-base tabular-nums">
+                                        {formatPrivateAmount(displayBalance, isPrivate)}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground">
+                                        {getRelativeTime(account.updated_at)}
+                                      </p>
+                                    </div>
+                                  </Link>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0 opacity-0 group-hover/row:opacity-100 transition-opacity"
+                                        onClick={(e) => e.preventDefault()}
+                                      >
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={(e) => handleToggleHidden(e, account.id)}>
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        Unhide account
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              );
+            })()}
           </Card>
         );
       })}

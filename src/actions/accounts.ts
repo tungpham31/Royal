@@ -223,3 +223,41 @@ export async function updateAccountsOrder(updates: AccountOrderUpdate[]) {
   revalidatePath("/accounts");
   return { success: true };
 }
+
+export async function toggleAccountHidden(accountId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  // First get the current hidden status
+  const { data: account, error: fetchError } = await supabase
+    .from("accounts")
+    .select("is_hidden")
+    .eq("id", accountId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (fetchError || !account) {
+    console.error("Error fetching account:", fetchError);
+    return { error: "Account not found" };
+  }
+
+  // Toggle the hidden status
+  const { error: updateError } = await supabase
+    .from("accounts")
+    .update({ is_hidden: !account.is_hidden })
+    .eq("id", accountId)
+    .eq("user_id", user.id);
+
+  if (updateError) {
+    console.error("Error updating account:", updateError);
+    return { error: "Failed to update account" };
+  }
+
+  revalidatePath("/accounts");
+  revalidatePath("/transactions");
+  return { success: true, is_hidden: !account.is_hidden };
+}

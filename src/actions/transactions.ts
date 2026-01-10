@@ -12,6 +12,7 @@ interface GetTransactionsParams {
   endDate?: string;
   search?: string;
   sort?: string;
+  includeHiddenAccounts?: boolean;
 }
 
 export async function getTransactions({
@@ -23,12 +24,25 @@ export async function getTransactions({
   endDate,
   search,
   sort = "date_desc",
+  includeHiddenAccounts = false,
 }: GetTransactionsParams = {}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
     return { error: "Unauthorized" };
+  }
+
+  // Get hidden account IDs to exclude (unless including hidden accounts)
+  let hiddenAccountIds: string[] = [];
+  if (!includeHiddenAccounts && !accountId) {
+    const { data: hiddenAccounts } = await supabase
+      .from("accounts")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("is_hidden", true);
+
+    hiddenAccountIds = (hiddenAccounts || []).map((a) => a.id);
   }
 
   let query = supabase
@@ -47,6 +61,11 @@ export async function getTransactions({
       category:categories(name, icon, color)
     `, { count: "exact" })
     .eq("user_id", user.id);
+
+  // Exclude hidden accounts
+  if (hiddenAccountIds.length > 0) {
+    query = query.not("account_id", "in", `(${hiddenAccountIds.join(",")})`);
+  }
 
   // Apply sorting
   switch (sort) {
