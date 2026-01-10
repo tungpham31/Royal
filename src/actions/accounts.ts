@@ -21,6 +21,7 @@ interface AccountWithPlaidItem {
   is_asset: boolean;
   include_in_net_worth: boolean;
   is_hidden: boolean;
+  display_order?: number;
   last_balance_update: string | null;
   created_at: string;
   updated_at: string;
@@ -42,6 +43,8 @@ export async function getAccounts() {
       plaid_item:plaid_items(institution_name, institution_logo)
     `)
     .eq("user_id", user.id)
+    .order("type", { ascending: true })
+    .order("display_order", { ascending: true })
     .order("created_at", { ascending: false })
     .returns<AccountWithPlaidItem[]>();
 
@@ -184,4 +187,39 @@ export async function getAccountById(accountId: string) {
     } as AccountDetail,
     transactionCount: transactionCount || 0,
   };
+}
+
+interface AccountOrderUpdate {
+  id: string;
+  display_order: number;
+}
+
+export async function updateAccountsOrder(updates: AccountOrderUpdate[]) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  // Batch update all accounts in the reordered group
+  const promises = updates.map(({ id, display_order }) =>
+    supabase
+      .from("accounts")
+      // @ts-ignore - display_order column added via migration
+      .update({ display_order })
+      .eq("id", id)
+      .eq("user_id", user.id)
+  );
+
+  const results = await Promise.all(promises);
+  const hasError = results.some((r) => r.error);
+
+  if (hasError) {
+    console.error("Error updating account order:", results);
+    return { error: "Failed to update account order" };
+  }
+
+  revalidatePath("/accounts");
+  return { success: true };
 }

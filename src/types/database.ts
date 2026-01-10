@@ -110,6 +110,7 @@ export interface Database {
           is_asset: boolean;
           include_in_net_worth: boolean;
           is_hidden: boolean;
+          display_order?: number;
           last_balance_update: string | null;
           created_at: string;
           updated_at: string;
@@ -132,6 +133,7 @@ export interface Database {
           is_asset?: boolean;
           include_in_net_worth?: boolean;
           is_hidden?: boolean;
+          display_order?: number;
           last_balance_update?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -154,6 +156,7 @@ export interface Database {
           is_asset?: boolean;
           include_in_net_worth?: boolean;
           is_hidden?: boolean;
+          display_order?: number;
           last_balance_update?: string | null;
           created_at?: string;
           updated_at?: string;

@@ -1,22 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  CreditCard,
-  Landmark,
-  PiggyBank,
   TrendingUp,
   TrendingDown,
-  Wallet,
   ChevronDown,
   ChevronRight,
   Building2,
 } from "lucide-react";
 import { formatPrivateAmount } from "@/lib/utils";
 import { usePrivacyStore } from "@/lib/stores/privacy-store";
+import { SortableAccountGroup } from "./sortable-account-group";
+import { SortableAccountItem } from "./sortable-account-item";
 
 interface Account {
   id: string;
@@ -28,6 +26,7 @@ interface Account {
   current_balance: number | null;
   available_balance: number | null;
   currency: string;
+  display_order?: number;
   updated_at: string;
   plaid_item?: {
     institution_name: string;
@@ -62,14 +61,6 @@ interface AccountsListProps {
 }
 
 const ACCOUNT_TYPE_ORDER = ["depository", "investment", "credit", "loan", "other"];
-
-const accountTypeIcons: Record<string, React.ReactNode> = {
-  depository: <Landmark className="h-5 w-5" />,
-  credit: <CreditCard className="h-5 w-5" />,
-  investment: <TrendingUp className="h-5 w-5" />,
-  loan: <PiggyBank className="h-5 w-5" />,
-  other: <Wallet className="h-5 w-5" />,
-};
 
 const accountTypeLabels: Record<string, string> = {
   depository: "Cash",
@@ -106,18 +97,43 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
   const { isPrivate } = usePrivacyStore();
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set());
 
-  // Group accounts by type
-  const groupedByType = accounts.reduce((acc, account) => {
-    const type = account.type || "other";
-    if (!acc[type]) {
-      acc[type] = [];
-    }
-    acc[type].push(account);
-    return acc;
-  }, {} as Record<string, Account[]>);
+  // Helper to group and sort accounts by type and display_order
+  const groupAccountsByType = (accountsList: Account[]) => {
+    const grouped = accountsList.reduce((acc, account) => {
+      const type = account.type || "other";
+      if (!acc[type]) acc[type] = [];
+      acc[type].push(account);
+      return acc;
+    }, {} as Record<string, Account[]>);
+
+    // Sort accounts within each type by display_order
+    Object.keys(grouped).forEach((type) => {
+      grouped[type].sort((a, b) => (a.display_order ?? 999) - (b.display_order ?? 999));
+    });
+
+    return grouped;
+  };
+
+  // State for account ordering (enables optimistic updates)
+  const [accountsByType, setAccountsByType] = useState<Record<string, Account[]>>(() => {
+    return groupAccountsByType(accounts);
+  });
+
+  // Update state when accounts prop changes
+  useEffect(() => {
+    setAccountsByType(groupAccountsByType(accounts));
+  }, [accounts]);
+
+  // Handler for reordering within a type
+  const handleReorder = useCallback((type: string, newAccounts: Account[]) => {
+    setAccountsByType((prev) => ({
+      ...prev,
+      [type]: newAccounts,
+    }));
+  }, []);
 
   // Sort types by defined order
-  const sortedTypes = Object.keys(groupedByType).sort((a, b) => {
+  const sortedTypes = Object.keys(accountsByType).sort((a, b) => {
     const indexA = ACCOUNT_TYPE_ORDER.indexOf(a);
     const indexB = ACCOUNT_TYPE_ORDER.indexOf(b);
     return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
@@ -151,7 +167,7 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
   return (
     <div className="space-y-4">
       {sortedTypes.map((type) => {
-        const typeAccounts = groupedByType[type];
+        const typeAccounts = accountsByType[type];
         const typeTotal = getTypeTotal(typeAccounts, type);
         const typeChange = getTypeChange(type);
         const isCollapsed = collapsedTypes.has(type);
@@ -174,11 +190,8 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
                       <ChevronDown className="h-4 w-4" />
                     )}
                   </Button>
-                  <div className="rounded-lg bg-muted p-2">
-                    {accountTypeIcons[type] || accountTypeIcons.other}
-                  </div>
                   <div>
-                    <CardTitle className="text-base">
+                    <CardTitle className="text-lg">
                       {accountTypeLabels[type] || type}
                     </CardTitle>
                     {typeChange && (
@@ -204,62 +217,68 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
               </div>
             </CardHeader>
             {!isCollapsed && (
-              <CardContent className="pt-0">
-                <div className="divide-y">
-                  {typeAccounts.map((account) => {
-                    const institutionName = account.plaid_item?.institution_name || "Manual";
-                    const institutionLogo = account.plaid_item?.institution_logo;
-                    const balance = account.current_balance || 0;
-                    const displayBalance = isLiability ? -Math.abs(balance) : balance;
+              <CardContent className="pt-0 pl-10">
+                <SortableAccountGroup
+                  accounts={typeAccounts}
+                  onReorder={(newAccounts) => handleReorder(type, newAccounts)}
+                >
+                  <div className="divide-y">
+                    {typeAccounts.map((account) => {
+                      const institutionName = account.plaid_item?.institution_name || "Manual";
+                      const institutionLogo = account.plaid_item?.institution_logo;
+                      const balance = account.current_balance || 0;
+                      const displayBalance = isLiability ? -Math.abs(balance) : balance;
 
-                    return (
-                      <Link
-                        key={account.id}
-                        href={`/accounts/${account.id}`}
-                        className="flex items-center justify-between py-3 first:pt-0 last:pb-0 -mx-3 px-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center gap-3">
-                          {/* Institution logo */}
-                          {institutionLogo ? (
-                            <img
-                              src={`data:image/png;base64,${institutionLogo}`}
-                              alt={institutionName}
-                              className="h-9 w-9 rounded-full object-contain"
-                            />
-                          ) : (
-                            <div
-                              className={`flex h-9 w-9 items-center justify-center rounded-full text-white text-sm font-medium ${getInstitutionColor(institutionName)}`}
-                            >
-                              {institutionName === "Manual" ? (
-                                <Building2 className="h-4 w-4" />
+                      return (
+                        <SortableAccountItem key={account.id} id={account.id}>
+                          <Link
+                            href={`/accounts/${account.id}`}
+                            className="flex items-center justify-between py-4 -mx-3 px-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-center gap-4">
+                              {/* Institution logo */}
+                              {institutionLogo ? (
+                                <img
+                                  src={`data:image/png;base64,${institutionLogo}`}
+                                  alt={institutionName}
+                                  className="h-11 w-11 rounded-full object-contain"
+                                />
                               ) : (
-                                getInstitutionInitial(institutionName)
+                                <div
+                                  className={`flex h-11 w-11 items-center justify-center rounded-full text-white font-medium ${getInstitutionColor(institutionName)}`}
+                                >
+                                  {institutionName === "Manual" ? (
+                                    <Building2 className="h-5 w-5" />
+                                  ) : (
+                                    getInstitutionInitial(institutionName)
+                                  )}
+                                </div>
                               )}
+                              <div>
+                                <p className="font-medium text-base">{account.name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {account.subtype ? (
+                                    <span className="capitalize">{account.subtype}</span>
+                                  ) : (
+                                    <span>{institutionName}</span>
+                                  )}
+                                </p>
+                              </div>
                             </div>
-                          )}
-                          <div>
-                            <p className="font-medium">{account.name}</p>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              {account.subtype && (
-                                <span className="capitalize">{account.subtype}</span>
-                              )}
-                              {!account.subtype && <span>{institutionName}</span>}
-                              {account.mask && <span>••••{account.mask}</span>}
+                            <div className="text-right">
+                              <p className="font-semibold text-base tabular-nums">
+                                {formatPrivateAmount(displayBalance, isPrivate)}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {getRelativeTime(account.updated_at)}
+                              </p>
                             </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold tabular-nums">
-                            {formatPrivateAmount(displayBalance, isPrivate)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {getRelativeTime(account.updated_at)}
-                          </p>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
+                          </Link>
+                        </SortableAccountItem>
+                      );
+                    })}
+                  </div>
+                </SortableAccountGroup>
               </CardContent>
             )}
           </Card>
