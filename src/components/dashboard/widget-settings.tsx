@@ -43,12 +43,12 @@ export function WidgetSettings({
       >
         {isEditing ? (
           <>
-            <Check className="h-4 w-4 mr-2" />
+            <Check className="h-4 w-4" />
             Done
           </>
         ) : (
           <>
-            <Pencil className="h-4 w-4 mr-2" />
+            <Pencil className="h-4 w-4" />
             Customize
           </>
         )}

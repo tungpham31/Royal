@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
@@ -50,6 +50,12 @@ export function AccountsNetWorthHeader({
 }: AccountsNetWorthHeaderProps) {
   const { isPrivate } = usePrivacyStore();
   const [timePeriod, setTimePeriod] = useState<TimePeriod>("1M");
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Prevent SSR rendering of chart to avoid dimension warnings
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Filter history based on selected time period
   const filteredHistory = useMemo(() => {
@@ -130,8 +136,8 @@ export function AccountsNetWorthHeader({
 
         {/* Full-width Chart */}
         <div className="h-[200px] w-full">
-          {history.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
+          {history.length > 0 && isMounted ? (
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="accountsNetWorthGradient" x1="0" y1="0" x2="0" y2="1">

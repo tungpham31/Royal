@@ -40,7 +40,7 @@ export function SyncButton({ plaidItemIds }: SyncButtonProps) {
 
   return (
     <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}>
-      <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+      <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
       {syncing ? "Syncing..." : "Sync"}
     </Button>
   );

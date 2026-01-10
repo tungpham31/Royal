@@ -1,12 +1,7 @@
 import { Header } from "@/components/layout/header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAccounts, getSectionOrder } from "@/actions/accounts";
 import { getNetWorthHistory } from "@/actions/dashboard";
-import { AccountsList } from "./accounts-list";
-import { AccountsNetWorthHeader } from "./accounts-net-worth-header";
-import { AccountsSummary } from "./accounts-summary";
-import { PlaidLinkButton } from "@/components/plaid/plaid-link";
-import { SyncButton } from "@/components/plaid/sync-button";
+import { AccountsPageClient } from "./accounts-page-client";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -127,58 +122,15 @@ export default async function AccountsPage() {
         description="Manage your connected accounts"
       />
 
-      <div className="p-6 space-y-6 overflow-hidden">
-        <div className="flex items-center justify-end gap-2">
-          <PlaidLinkButton />
-          <SyncButton plaidItemIds={plaidItems?.map((item) => item.id) || []} />
-        </div>
-
-        {error ? (
-          <Card>
-            <CardContent className="py-12">
-              <p className="text-center text-destructive">{error}</p>
-            </CardContent>
-          </Card>
-        ) : !accounts || accounts.length === 0 ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Connected Accounts</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                <p className="text-lg">No accounts linked yet</p>
-                <p className="text-sm mt-2">
-                  Connect your bank accounts to start tracking your finances
-                </p>
-                <div className="mt-4">
-                  <PlaidLinkButton />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-6">
-            {/* Net Worth Header with Chart */}
-            <AccountsNetWorthHeader
-              history={history || []}
-              currentNetWorth={netWorth}
-            />
-
-            {/* Accounts and Summary side by side */}
-            <div className="flex flex-col lg:flex-row gap-6 min-w-0">
-              {/* Accounts grouped by type */}
-              <div className="flex-1 min-w-0 overflow-hidden">
-                <AccountsList accounts={accounts} typeChanges={typeChanges} sectionOrder={sectionOrder} />
-              </div>
-
-              {/* Summary sidebar */}
-              <div className="lg:w-[280px] shrink-0">
-                <AccountsSummary accounts={accounts} />
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      <AccountsPageClient
+        accounts={accounts || null}
+        error={error || null}
+        history={history || []}
+        netWorth={netWorth}
+        typeChanges={typeChanges}
+        sectionOrder={sectionOrder}
+        plaidItemIds={plaidItems?.map((item) => item.id) || []}
+      />
     </>
   );
 }

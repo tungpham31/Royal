@@ -8,9 +8,10 @@ import { cn } from "@/lib/utils";
 interface SortableAccountItemProps {
   id: string;
   children: React.ReactNode;
+  isEditMode: boolean;
 }
 
-export function SortableAccountItem({ id, children }: SortableAccountItemProps) {
+export function SortableAccountItem({ id, children, isEditMode }: SortableAccountItemProps) {
   const {
     attributes,
     listeners,
@@ -31,23 +32,23 @@ export function SortableAccountItem({ id, children }: SortableAccountItemProps) 
       style={style}
       className={cn(
         "group relative",
-        isDragging && "z-50 opacity-90 shadow-lg rounded-lg bg-background"
+        isDragging && "z-50 opacity-90 shadow-lg rounded-lg bg-background",
+        isEditMode && "cursor-grab active:cursor-grabbing"
       )}
+      // Apply drag listeners to entire row when in edit mode
+      {...(isEditMode ? { ...attributes, ...listeners } : {})}
     >
-      {/* Drag handle - appears on hover, positioned at left edge */}
-      <button
-        {...attributes}
-        {...listeners}
-        className={cn(
-          "absolute -left-6 top-1/2 -translate-y-1/2 z-10",
-          "p-1 opacity-0 group-hover:opacity-100 transition-opacity",
-          "cursor-grab active:cursor-grabbing",
-          "hover:bg-muted rounded"
-        )}
-        title="Drag to reorder"
-      >
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
-      </button>
+      {/* Drag icon - only visible in edit mode as visual indicator */}
+      {isEditMode && (
+        <div
+          className={cn(
+            "absolute -left-6 top-1/2 -translate-y-1/2 z-10",
+            "p-1"
+          )}
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
+      )}
       {children}
     </div>
   );

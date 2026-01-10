@@ -19,6 +19,7 @@ import {
   EyeOff,
   Eye,
   MoreHorizontal,
+  GripVertical,
 } from "lucide-react";
 import { formatPrivateAmount, cn } from "@/lib/utils";
 import { getAccountDisplayName } from "@/lib/account-utils";
@@ -35,13 +36,17 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
+  DragOverEvent,
 } from "@dnd-kit/core";
+import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifiers";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { DragOverlay } from "@dnd-kit/core";
 
 interface Account {
   id: string;
@@ -88,6 +93,7 @@ interface AccountsListProps {
   accounts: Account[];
   typeChanges?: AccountTypeChange[];
   sectionOrder?: string[];
+  isEditMode: boolean;
 }
 
 const DEFAULT_SECTION_ORDER = ["depository", "investment", "credit", "loan", "other"];
@@ -123,12 +129,13 @@ function getInstitutionInitial(name: string): string {
   return name.charAt(0).toUpperCase();
 }
 
-export function AccountsList({ accounts, typeChanges = [], sectionOrder: initialSectionOrder }: AccountsListProps) {
+export function AccountsList({ accounts, typeChanges = [], sectionOrder: initialSectionOrder, isEditMode }: AccountsListProps) {
   const { isPrivate } = usePrivacyStore();
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set());
   const [showHiddenByType, setShowHiddenByType] = useState<Set<string>>(new Set());
   const [sectionOrder, setSectionOrder] = useState<string[]>(initialSectionOrder || DEFAULT_SECTION_ORDER);
   const [isMounted, setIsMounted] = useState(false);
+  const [activeSection, setActiveSection] = useState<string | null>(null);
   const sectionDndId = useId();
 
   // For hydration safety
@@ -155,19 +162,46 @@ export function AccountsList({ accounts, typeChanges = [], sectionOrder: initial
     })
   );
 
+  // Handle section drag start (for debugging)
+  const handleSectionDragStart = useCallback((event: DragStartEvent) => {
+    console.log("[Section DnD] dragStart - active:", event.active.id);
+    setActiveSection(event.active.id as string);
+  }, []);
+
+  // Handle section drag over (for debugging)
+  const handleSectionDragOver = useCallback((event: DragOverEvent) => {
+    console.log("[Section DnD] dragOver - active:", event.active.id, "over:", event.over?.id);
+  }, []);
+
+  // Handle section drag cancel
+  const handleSectionDragCancel = useCallback(() => {
+    console.log("[Section DnD] dragCancel");
+    setActiveSection(null);
+  }, []);
+
   // Handle section reorder
   const handleSectionDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setSectionOrder((prev) => {
-        const oldIndex = prev.indexOf(active.id as string);
-        const newIndex = prev.indexOf(over.id as string);
-        const newOrder = arrayMove(prev, oldIndex, newIndex);
-        // Fire and forget - persist to server
-        updateSectionOrder(newOrder);
-        return newOrder;
-      });
+    console.log("[Section DnD] dragEnd - active:", active?.id, "over:", over?.id);
+    setActiveSection(null);
+    if (!over) {
+      console.log("[Section DnD] No drop target (over is null)");
+      return;
     }
+    if (active.id === over.id) {
+      console.log("[Section DnD] Dropped on same element");
+      return;
+    }
+    console.log("[Section DnD] Reordering from", active.id, "to", over.id);
+    setSectionOrder((prev) => {
+      const oldIndex = prev.indexOf(active.id as string);
+      const newIndex = prev.indexOf(over.id as string);
+      const newOrder = arrayMove(prev, oldIndex, newIndex);
+      console.log("[Section DnD] New order:", newOrder);
+      // Fire and forget - persist to server
+      updateSectionOrder(newOrder);
+      return newOrder;
+    });
   }, []);
 
   // Helper to group and sort accounts by type and display_order
@@ -338,7 +372,11 @@ export function AccountsList({ accounts, typeChanges = [], sectionOrder: initial
       id={sectionDndId}
       sensors={sectionSensors}
       collisionDetection={closestCenter}
+      modifiers={[restrictToVerticalAxis]}
+      onDragStart={handleSectionDragStart}
+      onDragOver={handleSectionDragOver}
       onDragEnd={handleSectionDragEnd}
+      onDragCancel={handleSectionDragCancel}
     >
       <SortableContext items={sortedTypes} strategy={verticalListSortingStrategy}>
         <div className="space-y-4">
@@ -350,49 +388,51 @@ export function AccountsList({ accounts, typeChanges = [], sectionOrder: initial
             const isLiability = type === "credit" || type === "loan";
 
             return (
-              <SortableSection key={type} id={type}>
-                <Card>
-                  <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() => toggleCollapse(type)}
-                  >
-                    {isCollapsed ? (
-                      <ChevronRight className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <div>
-                    <CardTitle className="text-lg font-semibold">
-                      {accountTypeLabels[type] || type}
-                    </CardTitle>
-                    {typeChange && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                        {typeChange.changeAmount >= 0 ? (
-                          <TrendingUp className="h-3 w-3" />
-                        ) : (
-                          <TrendingDown className="h-3 w-3" />
-                        )}
-                        <span>
-                          {typeChange.changeAmount >= 0 ? "+" : ""}
-                          {formatPrivateAmount(typeChange.changeAmount, isPrivate)} (
-                          {typeChange.changePercent.toFixed(1)}%)
+              <SortableSection key={type} id={type} isEditMode={isEditMode}>
+                {(dragHandle) => (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {dragHandle}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => toggleCollapse(type)}
+                          >
+                            {isCollapsed ? (
+                              <ChevronRight className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <div>
+                            <CardTitle className="text-lg font-semibold">
+                              {accountTypeLabels[type] || type}
+                            </CardTitle>
+                            {typeChange && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                                {typeChange.changeAmount >= 0 ? (
+                                  <TrendingUp className="h-3 w-3" />
+                                ) : (
+                                  <TrendingDown className="h-3 w-3" />
+                                )}
+                                <span>
+                                  {typeChange.changeAmount >= 0 ? "+" : ""}
+                                  {formatPrivateAmount(typeChange.changeAmount, isPrivate)} (
+                                  {typeChange.changePercent.toFixed(1)}%)
+                                </span>
+                                <span className="text-muted-foreground/60">1 month change</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-lg font-semibold tabular-nums mr-10">
+                          {formatPrivateAmount(typeTotal, isPrivate)}
                         </span>
-                        <span className="text-muted-foreground/60">1 month change</span>
                       </div>
-                    )}
-                  </div>
-                </div>
-                <span className="text-lg font-semibold tabular-nums mr-10">
-                  {formatPrivateAmount(typeTotal, isPrivate)}
-                </span>
-              </div>
-            </CardHeader>
+                    </CardHeader>
             {!isCollapsed && (() => {
               const visibleAccounts = typeAccounts.filter((a) => !a.is_hidden);
               const hiddenAccounts = typeAccounts.filter((a) => a.is_hidden);
@@ -412,7 +452,7 @@ export function AccountsList({ accounts, typeChanges = [], sectionOrder: initial
                         const displayBalance = isLiability ? -Math.abs(balance) : balance;
 
                         return (
-                          <SortableAccountItem key={account.id} id={account.id}>
+                          <SortableAccountItem key={account.id} id={account.id} isEditMode={isEditMode}>
                             <div className="flex items-center justify-between py-4 -mx-3 px-3 rounded-lg hover:bg-muted/50 transition-colors group/row">
                               <Link
                                 href={`/accounts/${account.id}`}
@@ -581,15 +621,30 @@ export function AccountsList({ accounts, typeChanges = [], sectionOrder: initial
                       )}
                     </div>
                   )}
-                </CardContent>
-              );
-            })()}
-                </Card>
+                    </CardContent>
+                  );
+                })()}
+                  </Card>
+                )}
               </SortableSection>
             );
           })}
         </div>
       </SortableContext>
+      <DragOverlay>
+        {activeSection ? (
+          <Card className="shadow-xl opacity-90">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-lg font-semibold">
+                  {accountTypeLabels[activeSection] || activeSection}
+                </CardTitle>
+              </div>
+            </CardHeader>
+          </Card>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }

@@ -63,7 +63,6 @@ export function PlaidLinkButton({ onSuccess }: PlaidLinkButtonProps) {
     <Button
       onClick={() => open()}
       disabled={!ready || loading}
-      className="gap-2"
     >
       {loading ? (
         <Loader2 className="h-4 w-4 animate-spin" />
