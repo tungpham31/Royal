@@ -276,7 +276,7 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
                     )}
                   </div>
                 </div>
-                <span className={`text-lg font-semibold tabular-nums ${isLiability && typeTotal < 0 ? "" : ""}`}>
+                <span className="text-lg font-semibold tabular-nums mr-10">
                   {formatPrivateAmount(typeTotal, isPrivate)}
                 </span>
               </div>
