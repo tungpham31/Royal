@@ -163,12 +163,37 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
     });
   };
 
-  // Handle hiding/unhiding an account
-  const handleToggleHidden = async (e: React.MouseEvent, accountId: string) => {
+  // Handle hiding/unhiding an account with optimistic update
+  const handleToggleHidden = useCallback((e: React.MouseEvent, accountId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    await toggleAccountHidden(accountId);
-  };
+
+    // Optimistic update: immediately toggle is_hidden in local state
+    setAccountsByType((prev) => {
+      const newState: Record<string, Account[]> = {};
+
+      for (const [type, accounts] of Object.entries(prev)) {
+        newState[type] = accounts.map((account) => {
+          if (account.id === accountId) {
+            return { ...account, is_hidden: !account.is_hidden };
+          }
+          return account;
+        });
+
+        // Re-sort so hidden accounts go to the end
+        newState[type].sort((a, b) => {
+          if (a.is_hidden && !b.is_hidden) return 1;
+          if (!a.is_hidden && b.is_hidden) return -1;
+          return (a.display_order ?? 999) - (b.display_order ?? 999);
+        });
+      }
+
+      return newState;
+    });
+
+    // Fire and forget - server action will revalidate paths
+    toggleAccountHidden(accountId);
+  }, []);
 
   // Sort types by defined order
   const sortedTypes = Object.keys(accountsByType).sort((a, b) => {
