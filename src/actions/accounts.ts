@@ -294,3 +294,59 @@ export async function updateAccountNickname(accountId: string, nickname: string 
   revalidatePath("/net-worth");
   return { success: true, nickname: normalizedNickname };
 }
+
+const DEFAULT_SECTION_ORDER = ["depository", "investment", "credit", "loan", "other"];
+
+interface SectionOrderRow {
+  account_section_order: string[] | null;
+}
+
+export async function getSectionOrder() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { sectionOrder: DEFAULT_SECTION_ORDER };
+  }
+
+  const { data: preferences } = await supabase
+    .from("dashboard_preferences")
+    .select("account_section_order")
+    .eq("user_id", user.id)
+    .single<SectionOrderRow>();
+
+  if (!preferences || !preferences.account_section_order) {
+    return { sectionOrder: DEFAULT_SECTION_ORDER };
+  }
+
+  return { sectionOrder: preferences.account_section_order };
+}
+
+export async function updateSectionOrder(order: string[]) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from("dashboard_preferences")
+    .upsert(
+      {
+        user_id: user.id,
+        account_section_order: order,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" }
+    );
+
+  if (error) {
+    console.error("Error updating section order:", error);
+    return { error: "Failed to update section order" };
+  }
+
+  revalidatePath("/accounts");
+  return { success: true };
+}

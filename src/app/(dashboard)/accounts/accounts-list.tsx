@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useId } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,23 @@ import { getAccountDisplayName } from "@/lib/account-utils";
 import { usePrivacyStore } from "@/lib/stores/privacy-store";
 import { SortableAccountGroup } from "./sortable-account-group";
 import { SortableAccountItem } from "./sortable-account-item";
-import { toggleAccountHidden } from "@/actions/accounts";
+import { SortableSection } from "./sortable-section";
+import { toggleAccountHidden, updateSectionOrder } from "@/actions/accounts";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 
 interface Account {
   id: string;
@@ -71,9 +87,10 @@ function getRelativeTime(dateString: string): string {
 interface AccountsListProps {
   accounts: Account[];
   typeChanges?: AccountTypeChange[];
+  sectionOrder?: string[];
 }
 
-const ACCOUNT_TYPE_ORDER = ["depository", "investment", "credit", "loan", "other"];
+const DEFAULT_SECTION_ORDER = ["depository", "investment", "credit", "loan", "other"];
 
 const accountTypeLabels: Record<string, string> = {
   depository: "Cash",
@@ -106,10 +123,52 @@ function getInstitutionInitial(name: string): string {
   return name.charAt(0).toUpperCase();
 }
 
-export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) {
+export function AccountsList({ accounts, typeChanges = [], sectionOrder: initialSectionOrder }: AccountsListProps) {
   const { isPrivate } = usePrivacyStore();
   const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set());
   const [showHiddenByType, setShowHiddenByType] = useState<Set<string>>(new Set());
+  const [sectionOrder, setSectionOrder] = useState<string[]>(initialSectionOrder || DEFAULT_SECTION_ORDER);
+  const [isMounted, setIsMounted] = useState(false);
+  const sectionDndId = useId();
+
+  // For hydration safety
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Update section order when prop changes
+  useEffect(() => {
+    if (initialSectionOrder) {
+      setSectionOrder(initialSectionOrder);
+    }
+  }, [initialSectionOrder]);
+
+  // Sensors for section drag and drop
+  const sectionSensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle section reorder
+  const handleSectionDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setSectionOrder((prev) => {
+        const oldIndex = prev.indexOf(active.id as string);
+        const newIndex = prev.indexOf(over.id as string);
+        const newOrder = arrayMove(prev, oldIndex, newIndex);
+        // Fire and forget - persist to server
+        updateSectionOrder(newOrder);
+        return newOrder;
+      });
+    }
+  }, []);
 
   // Helper to group and sort accounts by type and display_order
   const groupAccountsByType = (accountsList: Account[]) => {
@@ -197,10 +256,10 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
     toggleAccountHidden(accountId);
   }, []);
 
-  // Sort types by defined order
+  // Sort types by user's section order
   const sortedTypes = Object.keys(accountsByType).sort((a, b) => {
-    const indexA = ACCOUNT_TYPE_ORDER.indexOf(a);
-    const indexB = ACCOUNT_TYPE_ORDER.indexOf(b);
+    const indexA = sectionOrder.indexOf(a);
+    const indexB = sectionOrder.indexOf(b);
     return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
   });
 
@@ -231,18 +290,69 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
     setCollapsedTypes(newCollapsed);
   };
 
-  return (
-    <div className="space-y-4">
-      {sortedTypes.map((type) => {
-        const typeAccounts = accountsByType[type];
-        const typeTotal = getTypeTotal(typeAccounts, type);
-        const typeChange = getTypeChange(type);
-        const isCollapsed = collapsedTypes.has(type);
-        const isLiability = type === "credit" || type === "loan";
+  // Don't render DnD until mounted to prevent hydration issues
+  if (!isMounted) {
+    return (
+      <div className="space-y-4">
+        {sortedTypes.map((type) => {
+          const typeAccounts = accountsByType[type];
+          const typeTotal = getTypeTotal(typeAccounts, type);
+          const isCollapsed = collapsedTypes.has(type);
+          const isLiability = type === "credit" || type === "loan";
 
-        return (
-          <Card key={type}>
-            <CardHeader className="pb-3">
+          return (
+            <Card key={type}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => toggleCollapse(type)}
+                    >
+                      {isCollapsed ? (
+                        <ChevronRight className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <CardTitle className="text-lg font-semibold">
+                      {accountTypeLabels[type] || type}
+                    </CardTitle>
+                  </div>
+                  <span className="text-lg font-semibold tabular-nums mr-10">
+                    {formatPrivateAmount(typeTotal, isPrivate)}
+                  </span>
+                </div>
+              </CardHeader>
+            </Card>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <DndContext
+      id={sectionDndId}
+      sensors={sectionSensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleSectionDragEnd}
+    >
+      <SortableContext items={sortedTypes} strategy={verticalListSortingStrategy}>
+        <div className="space-y-4">
+          {sortedTypes.map((type) => {
+            const typeAccounts = accountsByType[type];
+            const typeTotal = getTypeTotal(typeAccounts, type);
+            const typeChange = getTypeChange(type);
+            const isCollapsed = collapsedTypes.has(type);
+            const isLiability = type === "credit" || type === "loan";
+
+            return (
+              <SortableSection key={type} id={type}>
+                <Card>
+                  <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Button
@@ -474,9 +584,12 @@ export function AccountsList({ accounts, typeChanges = [] }: AccountsListProps) 
                 </CardContent>
               );
             })()}
-          </Card>
-        );
-      })}
-    </div>
+                </Card>
+              </SortableSection>
+            );
+          })}
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }

@@ -1,6 +1,6 @@
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getAccounts } from "@/actions/accounts";
+import { getAccounts, getSectionOrder } from "@/actions/accounts";
 import { getNetWorthHistory } from "@/actions/dashboard";
 import { AccountsList } from "./accounts-list";
 import { AccountsNetWorthHeader } from "./accounts-net-worth-header";
@@ -91,13 +91,15 @@ function calculateTypeChanges(
 }
 
 export default async function AccountsPage() {
-  const [accountsResult, historyResult] = await Promise.all([
+  const [accountsResult, historyResult, sectionOrderResult] = await Promise.all([
     getAccounts(),
     getNetWorthHistory(365), // Fetch 1 year of history
+    getSectionOrder(),
   ]);
 
   const { accounts, error } = accountsResult;
   const { history } = historyResult;
+  const { sectionOrder } = sectionOrderResult;
 
   // Get plaid items for sync buttons
   const supabase = await createClient();
@@ -166,7 +168,7 @@ export default async function AccountsPage() {
             <div className="flex flex-col lg:flex-row gap-6 min-w-0">
               {/* Accounts grouped by type */}
               <div className="flex-1 min-w-0 overflow-hidden">
-                <AccountsList accounts={accounts} typeChanges={typeChanges} />
+                <AccountsList accounts={accounts} typeChanges={typeChanges} sectionOrder={sectionOrder} />
               </div>
 
               {/* Summary sidebar */}
