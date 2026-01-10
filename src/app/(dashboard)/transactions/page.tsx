@@ -4,6 +4,8 @@ import { getTransactions, getCategories } from "@/actions/transactions";
 import { getAccounts } from "@/actions/accounts";
 import { TransactionsList } from "./transactions-list";
 import { TransactionsFilters } from "./transactions-filters";
+import { SyncButton } from "@/components/plaid/sync-button";
+import { createClient } from "@/lib/supabase/server";
 
 interface TransactionsPageProps {
   searchParams: Promise<{
@@ -42,6 +44,13 @@ export default async function TransactionsPage({
   const { categories } = categoriesResult;
   const { accounts } = accountsResult;
 
+  // Get plaid items for sync button
+  const supabase = await createClient();
+  const { data: plaidItems } = await supabase
+    .from("plaid_items")
+    .select("id")
+    .returns<{ id: string }[]>();
+
   return (
     <>
       <Header
@@ -50,10 +59,13 @@ export default async function TransactionsPage({
       />
 
       <div className="p-6">
-        <TransactionsFilters
-          accounts={accounts || []}
-          categories={categories || []}
-        />
+        <div className="flex items-center justify-between mb-4">
+          <TransactionsFilters
+            accounts={accounts || []}
+            categories={categories || []}
+          />
+          <SyncButton plaidItemIds={plaidItems?.map((item) => item.id) || []} />
+        </div>
 
         {!transactions || transactions.length === 0 ? (
           <Card>
