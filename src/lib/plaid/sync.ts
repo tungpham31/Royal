@@ -1,0 +1,195 @@
+import { plaidClient } from "@/lib/plaid/client";
+import { SupabaseClient } from "@supabase/supabase-js";
+
+interface SyncResult {
+  success: boolean;
+  added: number;
+  modified: number;
+  removed: number;
+  balancesUpdated: number;
+  error?: string;
+}
+
+interface PlaidItem {
+  id: string;
+  user_id: string;
+  access_token: string;
+  cursor: string | null;
+}
+
+/**
+ * Sync transactions and balances for a single Plaid item
+ */
+export async function syncPlaidItem(
+  supabase: SupabaseClient,
+  plaidItem: PlaidItem
+): Promise<SyncResult> {
+  try {
+    let cursor = plaidItem.cursor;
+    let hasMore = true;
+    let addedCount = 0;
+    let modifiedCount = 0;
+    let removedCount = 0;
+
+    while (hasMore) {
+      const response = await plaidClient.transactionsSync({
+        access_token: plaidItem.access_token,
+        cursor: cursor || undefined,
+      });
+
+      const { added, modified, removed, next_cursor, has_more } = response.data;
+
+      console.log(
+        `[Sync ${plaidItem.id}] added=${added.length}, modified=${modified.length}, removed=${removed.length}`
+      );
+
+      // Get user's accounts for this Plaid item
+      const { data: accounts } = await supabase
+        .from("accounts")
+        .select("id, plaid_account_id")
+        .eq("plaid_item_id", plaidItem.id)
+        .returns<{ id: string; plaid_account_id: string }[]>();
+
+      const accountMap = new Map(
+        (accounts || []).map((a) => [a.plaid_account_id, a.id])
+      );
+
+      // Process added transactions
+      if (added.length > 0) {
+        const transactionsToInsert = added
+          .map((txn) => {
+            const accountId = accountMap.get(txn.account_id);
+            if (!accountId) return null;
+
+            const logoUrl = txn.counterparties?.[0]?.logo_url || null;
+
+            return {
+              user_id: plaidItem.user_id,
+              account_id: accountId,
+              plaid_transaction_id: txn.transaction_id,
+              amount: txn.amount,
+              date: txn.date,
+              name: txn.name,
+              merchant_name: txn.merchant_name,
+              pending: txn.pending,
+              plaid_category_primary: txn.personal_finance_category?.primary || null,
+              plaid_category_detailed: txn.personal_finance_category?.detailed || null,
+              logo_url: logoUrl,
+            };
+          })
+          .filter(Boolean);
+
+        if (transactionsToInsert.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { error: insertError } = await (supabase as any)
+            .from("transactions")
+            .upsert(transactionsToInsert, {
+              onConflict: "plaid_transaction_id",
+            });
+
+          if (insertError) {
+            console.error("Error inserting transactions:", insertError);
+          } else {
+            addedCount += transactionsToInsert.length;
+          }
+        }
+      }
+
+      // Process modified transactions
+      for (const txn of modified) {
+        const accountId = accountMap.get(txn.account_id);
+        if (!accountId) continue;
+
+        const logoUrl = txn.counterparties?.[0]?.logo_url || null;
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: updateError } = await (supabase as any)
+          .from("transactions")
+          .update({
+            amount: txn.amount,
+            date: txn.date,
+            name: txn.name,
+            merchant_name: txn.merchant_name,
+            pending: txn.pending,
+            plaid_category_primary: txn.personal_finance_category?.primary || null,
+            plaid_category_detailed: txn.personal_finance_category?.detailed || null,
+            logo_url: logoUrl,
+          })
+          .eq("plaid_transaction_id", txn.transaction_id);
+
+        if (!updateError) {
+          modifiedCount++;
+        }
+      }
+
+      // Process removed transactions
+      for (const txn of removed) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: deleteError } = await (supabase as any)
+          .from("transactions")
+          .delete()
+          .eq("plaid_transaction_id", txn.transaction_id);
+
+        if (!deleteError) {
+          removedCount++;
+        }
+      }
+
+      cursor = next_cursor;
+      hasMore = has_more;
+    }
+
+    // Update cursor on Plaid item
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any)
+      .from("plaid_items")
+      .update({ cursor, last_synced_at: new Date().toISOString() })
+      .eq("id", plaidItem.id);
+
+    // Sync account balances
+    let balancesUpdated = 0;
+    try {
+      const balanceResponse = await plaidClient.accountsBalanceGet({
+        access_token: plaidItem.access_token,
+      });
+
+      for (const account of balanceResponse.data.accounts) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: balanceError } = await (supabase as any)
+          .from("accounts")
+          .update({
+            current_balance: account.balances.current,
+            available_balance: account.balances.available,
+            last_balance_update: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("plaid_account_id", account.account_id)
+          .eq("plaid_item_id", plaidItem.id);
+
+        if (!balanceError) {
+          balancesUpdated++;
+        }
+      }
+    } catch (balanceError) {
+      console.error(`[Sync ${plaidItem.id}] Error syncing balances:`, balanceError);
+    }
+
+    return {
+      success: true,
+      added: addedCount,
+      modified: modifiedCount,
+      removed: removedCount,
+      balancesUpdated,
+    };
+  } catch (error) {
+    console.error(`[Sync ${plaidItem.id}] Error:`, error);
+    return {
+      success: false,
+      added: 0,
+      modified: 0,
+      removed: 0,
+      balancesUpdated: 0,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
