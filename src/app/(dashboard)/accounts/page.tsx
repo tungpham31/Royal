@@ -2,7 +2,6 @@ import { Header } from "@/components/layout/header";
 import { getAccounts, getSectionOrder } from "@/actions/accounts";
 import { getNetWorthHistory } from "@/actions/dashboard";
 import { AccountsPageClient } from "./accounts-page-client";
-import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -96,13 +95,6 @@ export default async function AccountsPage() {
   const { history } = historyResult;
   const { sectionOrder } = sectionOrderResult;
 
-  // Get plaid items for sync buttons
-  const supabase = await createClient();
-  const { data: plaidItems } = await supabase
-    .from("plaid_items")
-    .select("id, institution_name")
-    .returns<{ id: string; institution_name: string }[]>();
-
   // Calculate current net worth
   const netWorth = (accounts || []).reduce((total, account) => {
     const balance = account.current_balance || 0;
@@ -129,7 +121,6 @@ export default async function AccountsPage() {
         netWorth={netWorth}
         typeChanges={typeChanges}
         sectionOrder={sectionOrder}
-        plaidItemIds={plaidItems?.map((item) => item.id) || []}
       />
     </>
   );

@@ -1,13 +1,6 @@
 import cron from "node-cron";
 import { createClient } from "@supabase/supabase-js";
-import { syncPlaidItem, recordNetWorthSnapshotForUser } from "./sync";
-
-interface PlaidItemRow {
-  id: string;
-  user_id: string;
-  access_token: string;
-  cursor: string | null;
-}
+import { syncAllItemsForUser, recordNetWorthSnapshotForUser } from "./sync";
 
 async function runSync() {
   console.log("[Cron] Starting scheduled Plaid sync...");
@@ -23,10 +16,11 @@ async function runSync() {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
+    // Get unique user IDs from plaid_items
     const { data: plaidItems, error: fetchError } = await supabase
       .from("plaid_items")
-      .select("id, user_id, access_token, cursor")
-      .returns<PlaidItemRow[]>();
+      .select("user_id")
+      .returns<{ user_id: string }[]>();
 
     if (fetchError) {
       console.error("[Cron] Error fetching plaid items:", fetchError);
@@ -38,40 +32,30 @@ async function runSync() {
       return;
     }
 
-    console.log(`[Cron] Syncing ${plaidItems.length} plaid items...`);
-
-    let successful = 0;
-    let failed = 0;
-
-    for (const item of plaidItems) {
-      try {
-        const result = await syncPlaidItem(supabase, item, "automatic");
-        if (result.success) {
-          successful++;
-          console.log(
-            `[Cron] Synced item ${item.id}: +${result.added} -${result.removed} ~${result.modified}`
-          );
-        } else {
-          failed++;
-          console.error(`[Cron] Failed to sync item ${item.id}:`, result.error);
-        }
-      } catch (err) {
-        failed++;
-        console.error(`[Cron] Error syncing item ${item.id}:`, err);
-      }
-    }
-
-    console.log(`[Cron] Sync complete. Successful: ${successful}, Failed: ${failed}`);
-
-    // Record net worth snapshots for all users that were synced
+    // Get unique user IDs
     const userIds = [...new Set(plaidItems.map((item) => item.user_id))];
-    console.log(`[Cron] Recording net worth for ${userIds.length} users...`);
+    console.log(`[Cron] Syncing for ${userIds.length} users...`);
+
+    let usersSuccessful = 0;
+    let usersFailed = 0;
 
     for (const userId of userIds) {
+      const result = await syncAllItemsForUser(supabase, userId, "automatic");
+      if (result.success) {
+        usersSuccessful++;
+        console.log(
+          `[Cron] Synced user ${userId}: ${result.itemsSynced} items, +${result.totalAdded} -${result.totalRemoved} ~${result.totalModified}`
+        );
+      } else {
+        usersFailed++;
+        console.error(`[Cron] Failed to sync user ${userId}:`, result.errors);
+      }
+
+      // Record net worth snapshot after sync
       await recordNetWorthSnapshotForUser(supabase, userId);
     }
 
-    console.log("[Cron] Net worth snapshots recorded");
+    console.log(`[Cron] Sync complete. Users successful: ${usersSuccessful}, failed: ${usersFailed}`);
   } catch (error) {
     console.error("[Cron] Unexpected error during sync:", error);
   }

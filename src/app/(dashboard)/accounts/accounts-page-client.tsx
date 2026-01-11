@@ -50,7 +50,6 @@ interface AccountsPageClientProps {
   netWorth: number;
   typeChanges: AccountTypeChange[];
   sectionOrder?: string[];
-  plaidItemIds: string[];
 }
 
 export function AccountsPageClient({
@@ -60,7 +59,6 @@ export function AccountsPageClient({
   netWorth,
   typeChanges,
   sectionOrder,
-  plaidItemIds,
 }: AccountsPageClientProps) {
   const [isEditMode, setIsEditMode] = useState(false);
 
@@ -68,7 +66,7 @@ export function AccountsPageClient({
     <div className="p-6 space-y-6 overflow-hidden">
       <div className="flex items-center justify-end gap-2">
         <PlaidLinkButton />
-        <SyncButton plaidItemIds={plaidItemIds} />
+        <SyncButton />
         <Button
           variant={isEditMode ? "secondary" : "outline"}
           size="sm"

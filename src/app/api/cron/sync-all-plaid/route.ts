@@ -1,13 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { syncPlaidItem } from "@/lib/plaid/sync";
-
-interface PlaidItemRow {
-  id: string;
-  user_id: string;
-  access_token: string;
-  cursor: string | null;
-}
+import { syncAllItemsForUser, recordNetWorthSnapshotForUser } from "@/lib/plaid/sync";
 
 export async function POST(request: Request) {
   // Verify cron secret
@@ -46,11 +39,11 @@ export async function POST(request: Request) {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    // Fetch all Plaid items
+    // Get unique user IDs from plaid_items
     const { data: plaidItems, error: fetchError } = await supabase
       .from("plaid_items")
-      .select("id, user_id, access_token, cursor")
-      .returns<PlaidItemRow[]>();
+      .select("user_id")
+      .returns<{ user_id: string }[]>();
 
     if (fetchError) {
       console.error("[Cron Sync] Error fetching plaid items:", fetchError);
@@ -65,55 +58,59 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         message: "No plaid items to sync",
-        results: [],
+        summary: { usersProcessed: 0 },
       });
     }
 
-    console.log(`[Cron Sync] Starting sync for ${plaidItems.length} items`);
+    // Get unique user IDs
+    const userIds = [...new Set(plaidItems.map((item) => item.user_id))];
+    console.log(`[Cron Sync] Starting sync for ${userIds.length} users`);
 
-    // Sync each item
+    // Sync each user (one history entry per user)
     const results = await Promise.allSettled(
-      plaidItems.map(async (item) => {
-        const result = await syncPlaidItem(supabase, item, "automatic");
-        return {
-          plaidItemId: item.id,
-          userId: item.user_id,
-          ...result,
-        };
+      userIds.map(async (userId) => {
+        const result = await syncAllItemsForUser(supabase, userId, "automatic");
+        // Record net worth snapshot after sync
+        await recordNetWorthSnapshotForUser(supabase, userId);
+        return { userId, ...result };
       })
     );
 
     // Process results
     const summary = {
-      total: results.length,
-      successful: 0,
-      failed: 0,
+      usersProcessed: userIds.length,
+      usersSuccessful: 0,
+      usersFailed: 0,
+      totalItemsSynced: 0,
+      totalItemsFailed: 0,
       totalAdded: 0,
       totalModified: 0,
       totalRemoved: 0,
       totalBalancesUpdated: 0,
-      errors: [] as { plaidItemId: string; error: string }[],
+      errors: [] as { userId: string; error: string }[],
     };
 
     results.forEach((result) => {
       if (result.status === "fulfilled") {
         if (result.value.success) {
-          summary.successful++;
-          summary.totalAdded += result.value.added;
-          summary.totalModified += result.value.modified;
-          summary.totalRemoved += result.value.removed;
-          summary.totalBalancesUpdated += result.value.balancesUpdated;
+          summary.usersSuccessful++;
         } else {
-          summary.failed++;
+          summary.usersFailed++;
           summary.errors.push({
-            plaidItemId: result.value.plaidItemId,
-            error: result.value.error || "Unknown error",
+            userId: result.value.userId,
+            error: result.value.errors.join("; ") || "Unknown error",
           });
         }
+        summary.totalItemsSynced += result.value.itemsSynced;
+        summary.totalItemsFailed += result.value.itemsFailed;
+        summary.totalAdded += result.value.totalAdded;
+        summary.totalModified += result.value.totalModified;
+        summary.totalRemoved += result.value.totalRemoved;
+        summary.totalBalancesUpdated += result.value.totalBalancesUpdated;
       } else {
-        summary.failed++;
+        summary.usersFailed++;
         summary.errors.push({
-          plaidItemId: "unknown",
+          userId: "unknown",
           error: result.reason?.message || "Promise rejected",
         });
       }

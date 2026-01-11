@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { syncPlaidItem, recordNetWorthSnapshotForUser } from "@/lib/plaid/sync";
+import { syncAllItemsForUser, recordNetWorthSnapshotForUser } from "@/lib/plaid/sync";
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -11,32 +11,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { plaid_item_id } = await request.json();
-
-    // Get the Plaid item
-    interface PlaidItemRow {
-      id: string;
-      user_id: string;
-      access_token: string;
-      cursor: string | null;
-    }
-    const { data: plaidItem, error: itemError } = await supabase
-      .from("plaid_items")
-      .select("id, user_id, access_token, cursor")
-      .eq("id", plaid_item_id)
-      .eq("user_id", user.id)
-      .single<PlaidItemRow>();
-
-    if (itemError || !plaidItem) {
-      return NextResponse.json({ error: "Plaid item not found" }, { status: 404 });
-    }
-
-    // Use the shared sync logic (manual trigger)
-    const result = await syncPlaidItem(supabase, plaidItem, "manual");
+    // Sync all items for the user (manual trigger)
+    const result = await syncAllItemsForUser(supabase, user.id, "manual");
 
     if (!result.success) {
       return NextResponse.json(
-        { error: result.error || "Failed to sync transactions" },
+        { error: result.errors.join("; ") || "Failed to sync transactions" },
         { status: 500 }
       );
     }
@@ -46,10 +26,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      added: result.added,
-      modified: result.modified,
-      removed: result.removed,
-      balancesUpdated: result.balancesUpdated,
+      itemsSynced: result.itemsSynced,
+      added: result.totalAdded,
+      modified: result.totalModified,
+      removed: result.totalRemoved,
+      balancesUpdated: result.totalBalancesUpdated,
     });
   } catch (error) {
     console.error("Error syncing transactions:", error);
