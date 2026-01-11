@@ -45,7 +45,7 @@ async function runSync() {
 
     for (const item of plaidItems) {
       try {
-        const result = await syncPlaidItem(supabase, item);
+        const result = await syncPlaidItem(supabase, item, "automatic");
         if (result.success) {
           successful++;
           console.log(

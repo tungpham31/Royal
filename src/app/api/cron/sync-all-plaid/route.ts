@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     // Sync each item
     const results = await Promise.allSettled(
       plaidItems.map(async (item) => {
-        const result = await syncPlaidItem(supabase, item);
+        const result = await syncPlaidItem(supabase, item, "automatic");
         return {
           plaidItemId: item.id,
           userId: item.user_id,

@@ -10,6 +10,49 @@ interface SyncResult {
   error?: string;
 }
 
+export type TriggerType = "manual" | "automatic";
+
+interface SyncHistoryRecord {
+  userId: string;
+  plaidItemId: string;
+  triggerType: TriggerType;
+  status: "success" | "failed";
+  transactionsAdded: number;
+  transactionsModified: number;
+  transactionsRemoved: number;
+  balancesUpdated: number;
+  errorMessage?: string;
+  startedAt: Date;
+  completedAt: Date;
+}
+
+/**
+ * Record sync history in the database
+ */
+async function recordSyncHistory(
+  supabase: SupabaseClient,
+  record: SyncHistoryRecord
+): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any).from("sync_history").insert({
+    user_id: record.userId,
+    plaid_item_id: record.plaidItemId,
+    trigger_type: record.triggerType,
+    status: record.status,
+    transactions_added: record.transactionsAdded,
+    transactions_modified: record.transactionsModified,
+    transactions_removed: record.transactionsRemoved,
+    balances_updated: record.balancesUpdated,
+    error_message: record.errorMessage,
+    started_at: record.startedAt.toISOString(),
+    completed_at: record.completedAt.toISOString(),
+  });
+
+  if (error) {
+    console.error(`[SyncHistory] Error recording sync history:`, error);
+  }
+}
+
 interface PlaidItem {
   id: string;
   user_id: string;
@@ -22,8 +65,11 @@ interface PlaidItem {
  */
 export async function syncPlaidItem(
   supabase: SupabaseClient,
-  plaidItem: PlaidItem
+  plaidItem: PlaidItem,
+  triggerType: TriggerType = "manual"
 ): Promise<SyncResult> {
+  const startedAt = new Date();
+
   try {
     let cursor = plaidItem.cursor;
     let hasMore = true;
@@ -174,6 +220,22 @@ export async function syncPlaidItem(
       console.error(`[Sync ${plaidItem.id}] Error syncing balances:`, balanceError);
     }
 
+    const completedAt = new Date();
+
+    // Record sync history
+    await recordSyncHistory(supabase, {
+      userId: plaidItem.user_id,
+      plaidItemId: plaidItem.id,
+      triggerType,
+      status: "success",
+      transactionsAdded: addedCount,
+      transactionsModified: modifiedCount,
+      transactionsRemoved: removedCount,
+      balancesUpdated,
+      startedAt,
+      completedAt,
+    });
+
     return {
       success: true,
       added: addedCount,
@@ -183,13 +245,31 @@ export async function syncPlaidItem(
     };
   } catch (error) {
     console.error(`[Sync ${plaidItem.id}] Error:`, error);
+    const completedAt = new Date();
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+    // Record sync history for failed sync
+    await recordSyncHistory(supabase, {
+      userId: plaidItem.user_id,
+      plaidItemId: plaidItem.id,
+      triggerType,
+      status: "failed",
+      transactionsAdded: 0,
+      transactionsModified: 0,
+      transactionsRemoved: 0,
+      balancesUpdated: 0,
+      errorMessage,
+      startedAt,
+      completedAt,
+    });
+
     return {
       success: false,
       added: 0,
       modified: 0,
       removed: 0,
       balancesUpdated: 0,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: errorMessage,
     };
   }
 }

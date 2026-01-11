@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Plaid item not found" }, { status: 404 });
     }
 
-    // Use the shared sync logic
-    const result = await syncPlaidItem(supabase, plaidItem);
+    // Use the shared sync logic (manual trigger)
+    const result = await syncPlaidItem(supabase, plaidItem, "manual");
 
     if (!result.success) {
       return NextResponse.json(
