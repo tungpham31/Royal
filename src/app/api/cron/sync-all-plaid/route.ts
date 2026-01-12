@@ -2,7 +2,21 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { syncAllItemsForUser, recordNetWorthSnapshotForUser } from "@/lib/plaid/sync";
 
+// Vercel cron configuration
+export const dynamic = "force-dynamic";
+export const maxDuration = 60; // Allow up to 60 seconds for sync
+
+// GET handler for Vercel cron (which uses GET requests)
+export async function GET(request: Request) {
+  return handleCronSync(request);
+}
+
+// POST handler for manual/external triggers
 export async function POST(request: Request) {
+  return handleCronSync(request);
+}
+
+async function handleCronSync(request: Request) {
   // Verify cron secret
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
