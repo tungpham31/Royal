@@ -314,3 +314,28 @@ export async function getCurrentMonthSpending() {
     lastMonthTotal: lastCumulative,
   };
 }
+
+interface SyncHistoryRow {
+  completed_at: string;
+}
+
+export async function getLastSyncTime(): Promise<{ lastSyncTime: string | null }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { lastSyncTime: null };
+  }
+
+  const { data } = await supabase
+    .from("sync_history")
+    .select("completed_at")
+    .eq("user_id", user.id)
+    .eq("status", "success")
+    .order("completed_at", { ascending: false })
+    .limit(1)
+    .single()
+    .then((res) => ({ ...res, data: res.data as SyncHistoryRow | null }));
+
+  return { lastSyncTime: data?.completed_at || null };
+}

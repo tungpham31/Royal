@@ -5,6 +5,7 @@ import {
   getDashboardPreferences,
   getNetWorthHistory,
   getCurrentMonthSpending,
+  getLastSyncTime,
 } from "@/actions/dashboard";
 import { DashboardClient } from "./dashboard-client";
 import { SyncButton } from "@/components/plaid/sync-button";
@@ -16,12 +17,14 @@ export default async function DashboardPage() {
     preferencesResult,
     netWorthResult,
     spendingResult,
+    lastSyncResult,
   ] = await Promise.all([
     getDashboardStats(),
     getRecentTransactions(),
     getDashboardPreferences(),
     getNetWorthHistory(365), // Fetch 1 year for time period filtering
     getCurrentMonthSpending(),
+    getLastSyncTime(),
   ]);
 
   const currentNetWorth = statsResult.stats?.netWorth || 0;
@@ -37,7 +40,7 @@ export default async function DashboardPage() {
 
       <div className="p-6">
         <div className="flex justify-end mb-4">
-          <SyncButton />
+          <SyncButton lastSyncTime={lastSyncResult.lastSyncTime} />
         </div>
         <DashboardClient
           initialLayout={layout}
