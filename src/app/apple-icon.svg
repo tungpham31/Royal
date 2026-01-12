@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" fill="none">
+  <!-- Background -->
+  <rect width="180" height="180" rx="40" fill="#F97316"/>
+  <!-- Crown icon - scaled and centered -->
+  <path d="M45 126V63L67.5 85.5L90 51.5L112.5 85.5L135 63V126H45Z" fill="white"/>
+  <!-- Crown base -->
+  <rect x="45" y="126" width="90" height="11" rx="2" fill="white"/>
+</svg>
