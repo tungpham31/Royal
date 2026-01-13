@@ -571,5 +571,16 @@ export const REAL_ESTATE_SUBTYPE_LABELS: Record<RealEstateSubtype, string> = {
   rental_property: "Rental Property",
 };
 
+// Loan types
+export type LoanSubtype = "mortgage" | "auto" | "student" | "personal" | "other";
+
+export const LOAN_SUBTYPE_LABELS: Record<LoanSubtype, string> = {
+  mortgage: "Mortgage",
+  auto: "Auto Loan",
+  student: "Student Loan",
+  personal: "Personal Loan",
+  other: "Other Loan",
+};
+
 // Helper type for asset valuations
 export type AssetValuation = Database["public"]["Tables"]["asset_valuations"]["Row"];

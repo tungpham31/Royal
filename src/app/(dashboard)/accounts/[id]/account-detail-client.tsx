@@ -27,7 +27,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { UpdateValueDialog } from "@/components/accounts/update-value-dialog";
-import { REAL_ESTATE_SUBTYPE_LABELS, RealEstateSubtype } from "@/types/database";
+import { REAL_ESTATE_SUBTYPE_LABELS, RealEstateSubtype, LOAN_SUBTYPE_LABELS, LoanSubtype } from "@/types/database";
 
 interface Transaction {
   id: string;
@@ -117,6 +117,8 @@ export function AccountDetailClient({ account, transactionCount, valuations = []
   const [isDeleting, setIsDeleting] = useState(false);
 
   const isRealEstate = account.type === "real_estate";
+  const isManualLoan = account.type === "loan" && account.is_manual;
+  const isManualAsset = isRealEstate || isManualLoan;
 
   const handleSaveNickname = async () => {
     setIsSaving(true);
@@ -268,13 +270,13 @@ export function AccountDetailClient({ account, transactionCount, valuations = []
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {isRealEstate && (
+              {isManualAsset && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setUpdateValueOpen(true)}
                 >
-                  Update Value
+                  {isRealEstate ? "Update Value" : "Update Balance"}
                 </Button>
               )}
               <Select
@@ -511,6 +513,30 @@ export function AccountDetailClient({ account, transactionCount, valuations = []
                   </span>
                 </div>
               </>
+            ) : isManualLoan ? (
+              // Manual loan summary
+              <>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Loan Type</span>
+                  <span className="font-medium">
+                    {account.subtype && LOAN_SUBTYPE_LABELS[account.subtype as LoanSubtype]
+                      ? LOAN_SUBTYPE_LABELS[account.subtype as LoanSubtype]
+                      : "Loan"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Current Balance</span>
+                  <span className="font-medium tabular-nums">
+                    {formatPrivateAmount(Math.abs(balance), isPrivate)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Last Updated</span>
+                  <span className="font-medium">
+                    {new Date(account.updated_at).toLocaleDateString()}
+                  </span>
+                </div>
+              </>
             ) : (
               // Regular account summary
               <>
@@ -597,8 +623,8 @@ export function AccountDetailClient({ account, transactionCount, valuations = []
               )}
             </div>
 
-            {isRealEstate ? (
-              // Delete option for real estate
+            {isManualAsset ? (
+              // Delete option for manual assets (real estate and loans)
               <div className="border-t pt-4 mt-4">
                 <Button
                   variant="destructive"
@@ -608,7 +634,7 @@ export function AccountDetailClient({ account, transactionCount, valuations = []
                   disabled={isDeleting}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  {isDeleting ? "Deleting..." : "Delete Asset"}
+                  {isDeleting ? "Deleting..." : isRealEstate ? "Delete Asset" : "Delete Loan"}
                 </Button>
               </div>
             ) : (
@@ -637,13 +663,13 @@ export function AccountDetailClient({ account, transactionCount, valuations = []
         </Card>
       </div>
 
-      {/* Update Value Dialog for Real Estate */}
-      {isRealEstate && (
+      {/* Update Value Dialog for Manual Assets */}
+      {isManualAsset && (
         <UpdateValueDialog
           open={updateValueOpen}
           onOpenChange={setUpdateValueOpen}
           accountId={account.id}
-          currentValue={balance}
+          currentValue={Math.abs(balance)}
         />
       )}
     </div>

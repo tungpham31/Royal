@@ -9,8 +9,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Building2, Home } from "lucide-react";
+import { Plus, Building2, Home, Landmark } from "lucide-react";
 import { AddRealEstateDialog } from "./add-real-estate-dialog";
+import { AddLoanDialog } from "./add-loan-dialog";
 
 interface AddAccountDialogProps {
   onOpenPlaidLink: () => void;
@@ -23,6 +24,7 @@ export function AddAccountDialog({
 }: AddAccountDialogProps) {
   const [open, setOpen] = useState(false);
   const [showRealEstateForm, setShowRealEstateForm] = useState(false);
+  const [showLoanForm, setShowLoanForm] = useState(false);
 
   const handleFinancialAccountClick = () => {
     setOpen(false);
@@ -35,6 +37,15 @@ export function AddAccountDialog({
 
   const handleRealEstateClose = () => {
     setShowRealEstateForm(false);
+    setOpen(false);
+  };
+
+  const handleLoanClick = () => {
+    setShowLoanForm(true);
+  };
+
+  const handleLoanClose = () => {
+    setShowLoanForm(false);
     setOpen(false);
   };
 
@@ -52,6 +63,20 @@ export function AddAccountDialog({
     );
   }
 
+  if (showLoanForm) {
+    return (
+      <AddLoanDialog
+        open={true}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            handleLoanClose();
+          }
+        }}
+        onBack={() => setShowLoanForm(false)}
+      />
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -60,11 +85,11 @@ export function AddAccountDialog({
           Add Account
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Add Account</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-4 py-4">
+        <div className="grid grid-cols-3 gap-4 py-4">
           <button
             onClick={handleFinancialAccountClick}
             className="flex flex-col items-center gap-3 p-6 rounded-lg border border-border hover:border-primary hover:bg-accent transition-colors"
@@ -75,7 +100,7 @@ export function AddAccountDialog({
             <div className="text-center">
               <div className="font-medium">Financial Account</div>
               <div className="text-sm text-muted-foreground mt-1">
-                Connect bank, credit card, or investment account
+                Connect bank, credit card, or investment
               </div>
             </div>
           </button>
@@ -90,6 +115,20 @@ export function AddAccountDialog({
               <div className="font-medium">Real Estate</div>
               <div className="text-sm text-muted-foreground mt-1">
                 Track property value manually
+              </div>
+            </div>
+          </button>
+          <button
+            onClick={handleLoanClick}
+            className="flex flex-col items-center gap-3 p-6 rounded-lg border border-border hover:border-primary hover:bg-accent transition-colors"
+          >
+            <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+              <Landmark className="h-6 w-6 text-red-600 dark:text-red-400" />
+            </div>
+            <div className="text-center">
+              <div className="font-medium">Loan</div>
+              <div className="text-sm text-muted-foreground mt-1">
+                Track mortgage, auto, or other loans
               </div>
             </div>
           </button>

@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { RealEstateSubtype } from "@/types/database";
+import { RealEstateSubtype, LoanSubtype } from "@/types/database";
 
 interface CreateRealEstateAssetData {
   name: string;
@@ -60,6 +60,53 @@ export async function createRealEstateAsset(data: CreateRealEstateAssetData) {
   if (valuationError) {
     console.error("Error creating initial valuation:", valuationError);
     // Don't fail - the account is created, just log the error
+  }
+
+  revalidatePath("/accounts");
+  revalidatePath("/dashboard");
+  return { success: true, accountId: account.id };
+}
+
+interface CreateManualLoanData {
+  name: string;
+  subtype: LoanSubtype;
+  balance: number;
+}
+
+export async function createManualLoan(data: CreateManualLoanData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  // Create the account with is_manual=true and type='loan'
+  // Loans are liabilities, so is_asset=false
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: account, error: accountError } = await (supabase as any)
+    .from("accounts")
+    .insert({
+      user_id: user.id,
+      name: data.name,
+      type: "loan",
+      subtype: data.subtype,
+      current_balance: data.balance,
+      currency: "USD",
+      is_manual: true,
+      is_asset: false,
+      include_in_net_worth: true,
+      is_hidden: false,
+      last_balance_update: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (accountError || !account) {
+    console.error("Error creating manual loan:", accountError);
+    return { error: "Failed to create loan" };
   }
 
   revalidatePath("/accounts");
