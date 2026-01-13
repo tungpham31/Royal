@@ -16,6 +16,7 @@ import {
   ChevronDown,
   ChevronRight,
   Building2,
+  Home,
   EyeOff,
   Eye,
   MoreHorizontal,
@@ -28,6 +29,7 @@ import { SortableAccountGroup } from "./sortable-account-group";
 import { SortableAccountItem } from "./sortable-account-item";
 import { SortableSection } from "./sortable-section";
 import { toggleAccountHidden, updateSectionOrder } from "@/actions/accounts";
+import { REAL_ESTATE_SUBTYPE_LABELS, RealEstateSubtype } from "@/types/database";
 import {
   DndContext,
   closestCenter,
@@ -96,13 +98,14 @@ interface AccountsListProps {
   isEditMode: boolean;
 }
 
-const DEFAULT_SECTION_ORDER = ["depository", "investment", "credit", "loan", "other"];
+const DEFAULT_SECTION_ORDER = ["depository", "investment", "real_estate", "credit", "loan", "other"];
 
 const accountTypeLabels: Record<string, string> = {
   depository: "Cash",
   credit: "Credit Cards",
   investment: "Investments",
   loan: "Loans",
+  real_estate: "Real Estate",
   other: "Other",
 };
 
@@ -450,6 +453,7 @@ export function AccountsList({ accounts, typeChanges = [], sectionOrder: initial
                         const institutionLogo = account.plaid_item?.institution_logo;
                         const balance = account.current_balance || 0;
                         const displayBalance = isLiability ? -Math.abs(balance) : balance;
+                        const isRealEstate = account.type === "real_estate";
 
                         return (
                           <SortableAccountItem key={account.id} id={account.id} isEditMode={isEditMode}>
@@ -458,8 +462,12 @@ export function AccountsList({ accounts, typeChanges = [], sectionOrder: initial
                                 href={`/accounts/${account.id}`}
                                 className="flex items-center gap-4 flex-1 min-w-0"
                               >
-                                {/* Institution logo */}
-                                {institutionLogo ? (
+                                {/* Institution logo or icon */}
+                                {isRealEstate ? (
+                                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-400">
+                                    <Home className="h-5 w-5" />
+                                  </div>
+                                ) : institutionLogo ? (
                                   <img
                                     src={`data:image/png;base64,${institutionLogo}`}
                                     alt={institutionName}
@@ -479,7 +487,9 @@ export function AccountsList({ accounts, typeChanges = [], sectionOrder: initial
                                 <div>
                                   <p className="font-medium text-base">{getAccountDisplayName(account)}</p>
                                   <p className="text-sm text-muted-foreground">
-                                    {account.subtype ? (
+                                    {isRealEstate && account.subtype ? (
+                                      <span>{REAL_ESTATE_SUBTYPE_LABELS[account.subtype as RealEstateSubtype] || account.subtype}</span>
+                                    ) : account.subtype ? (
                                       <span className="capitalize">{account.subtype}</span>
                                     ) : (
                                       <span>{institutionName}</span>
@@ -540,6 +550,7 @@ export function AccountsList({ accounts, typeChanges = [], sectionOrder: initial
                             const institutionLogo = account.plaid_item?.institution_logo;
                             const balance = account.current_balance || 0;
                             const displayBalance = isLiability ? -Math.abs(balance) : balance;
+                            const isRealEstate = account.type === "real_estate";
 
                             return (
                               <div
@@ -550,8 +561,12 @@ export function AccountsList({ accounts, typeChanges = [], sectionOrder: initial
                                   href={`/accounts/${account.id}`}
                                   className="flex items-center gap-4 flex-1 min-w-0"
                                 >
-                                  {/* Institution logo */}
-                                  {institutionLogo ? (
+                                  {/* Institution logo or icon */}
+                                  {isRealEstate ? (
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-400 grayscale">
+                                      <Home className="h-5 w-5" />
+                                    </div>
+                                  ) : institutionLogo ? (
                                     <img
                                       src={`data:image/png;base64,${institutionLogo}`}
                                       alt={institutionName}
@@ -575,7 +590,9 @@ export function AccountsList({ accounts, typeChanges = [], sectionOrder: initial
                                   <div>
                                     <p className="font-medium text-base">{getAccountDisplayName(account)}</p>
                                     <p className="text-sm text-muted-foreground">
-                                      {account.subtype ? (
+                                      {isRealEstate && account.subtype ? (
+                                        <span>{REAL_ESTATE_SUBTYPE_LABELS[account.subtype as RealEstateSubtype] || account.subtype}</span>
+                                      ) : account.subtype ? (
                                         <span className="capitalize">{account.subtype}</span>
                                       ) : (
                                         <span>{institutionName}</span>

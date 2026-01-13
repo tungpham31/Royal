@@ -17,12 +17,13 @@ interface AccountsSummaryProps {
   accounts: Account[];
 }
 
-const ASSET_TYPES = ["depository", "investment", "other"];
+const ASSET_TYPES = ["depository", "investment", "real_estate", "other"];
 const LIABILITY_TYPES = ["credit", "loan"];
 
 const TYPE_LABELS: Record<string, string> = {
   depository: "Cash",
   investment: "Investments",
+  real_estate: "Real Estate",
   credit: "Credit Cards",
   loan: "Loans",
   other: "Other",
@@ -31,6 +32,7 @@ const TYPE_LABELS: Record<string, string> = {
 const TYPE_COLORS: Record<string, string> = {
   depository: "bg-green-500",
   investment: "bg-cyan-500",
+  real_estate: "bg-orange-500",
   credit: "bg-red-500",
   loan: "bg-amber-500",
   other: "bg-gray-500",

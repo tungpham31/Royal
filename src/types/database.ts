@@ -520,6 +520,35 @@ export interface Database {
           updated_at?: string;
         };
       };
+      asset_valuations: {
+        Row: {
+          id: string;
+          user_id: string;
+          account_id: string;
+          valuation_date: string;
+          value: number;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          account_id: string;
+          valuation_date?: string;
+          value: number;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          account_id?: string;
+          valuation_date?: string;
+          value?: number;
+          notes?: string | null;
+          created_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
@@ -532,3 +561,15 @@ export interface Database {
     };
   };
 }
+
+// Real Estate types
+export type RealEstateSubtype = "primary_home" | "secondary_home" | "rental_property";
+
+export const REAL_ESTATE_SUBTYPE_LABELS: Record<RealEstateSubtype, string> = {
+  primary_home: "Primary Home",
+  secondary_home: "Secondary Home",
+  rental_property: "Rental Property",
+};
+
+// Helper type for asset valuations
+export type AssetValuation = Database["public"]["Tables"]["asset_valuations"]["Row"];

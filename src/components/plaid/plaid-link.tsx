@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePlaidLink } from "react-plaid-link";
-import { Button } from "@/components/ui/button";
-import { Plus, Loader2 } from "lucide-react";
+import { AddAccountDialog } from "@/components/accounts/add-account-dialog";
 
 interface PlaidLinkButtonProps {
   onSuccess?: () => void;
@@ -60,16 +59,9 @@ export function PlaidLinkButton({ onSuccess }: PlaidLinkButtonProps) {
   });
 
   return (
-    <Button
-      onClick={() => open()}
-      disabled={!ready || loading}
-    >
-      {loading ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <Plus className="h-4 w-4" />
-      )}
-      Link Account
-    </Button>
+    <AddAccountDialog
+      onOpenPlaidLink={() => open()}
+      plaidReady={ready && !loading}
+    />
   );
 }

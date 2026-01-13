@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getAccountById } from "@/actions/accounts";
+import { getAssetValuationHistory } from "@/actions/manual-assets";
 import { getAccountDisplayName } from "@/lib/account-utils";
 import { Header } from "@/components/layout/header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Home } from "lucide-react";
 import { AccountDetailClient } from "./account-detail-client";
 
 export const dynamic = "force-dynamic";
@@ -21,8 +21,16 @@ export default async function AccountDetailPage({ params }: AccountDetailPagePro
     notFound();
   }
 
+  const isRealEstate = account.type === "real_estate";
   const institutionName = account.plaid_item?.institution_name || "Manual";
   const institutionLogo = account.plaid_item?.institution_logo;
+
+  // Fetch valuation history for real estate accounts
+  let valuations: { id: string; valuation_date: string; value: number; notes: string | null; created_at: string }[] = [];
+  if (isRealEstate) {
+    const { valuations: fetchedValuations } = await getAssetValuationHistory(id);
+    valuations = fetchedValuations || [];
+  }
 
   return (
     <>
@@ -34,7 +42,9 @@ export default async function AccountDetailPage({ params }: AccountDetailPagePro
             </Link>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
             <div className="flex items-center gap-2">
-              {institutionLogo ? (
+              {isRealEstate ? (
+                <Home className="h-5 w-5 text-orange-500" />
+              ) : institutionLogo ? (
                 <img
                   src={`data:image/png;base64,${institutionLogo}`}
                   alt={institutionName}
@@ -51,6 +61,7 @@ export default async function AccountDetailPage({ params }: AccountDetailPagePro
         <AccountDetailClient
           account={account}
           transactionCount={transactionCount}
+          valuations={valuations}
         />
       </div>
     </>
