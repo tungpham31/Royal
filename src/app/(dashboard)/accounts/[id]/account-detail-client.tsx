@@ -27,7 +27,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { UpdateValueDialog } from "@/components/accounts/update-value-dialog";
-import { REAL_ESTATE_SUBTYPE_LABELS, RealEstateSubtype, LOAN_SUBTYPE_LABELS, LoanSubtype } from "@/types/database";
+import { REAL_ESTATE_SUBTYPE_LABELS, RealEstateSubtype, LOAN_SUBTYPE_LABELS, LoanSubtype, INVESTMENT_SUBTYPE_LABELS, InvestmentSubtype } from "@/types/database";
 
 interface Transaction {
   id: string;
@@ -118,7 +118,8 @@ export function AccountDetailClient({ account, transactionCount, valuations = []
 
   const isRealEstate = account.type === "real_estate";
   const isManualLoan = account.type === "loan" && account.is_manual;
-  const isManualAsset = isRealEstate || isManualLoan;
+  const isManualInvestment = account.type === "investment" && account.is_manual;
+  const isManualAsset = isRealEstate || isManualLoan || isManualInvestment;
 
   const handleSaveNickname = async () => {
     setIsSaving(true);
@@ -152,15 +153,15 @@ export function AccountDetailClient({ account, transactionCount, valuations = []
   const isLiability = account.type === "credit" || account.type === "loan";
   const displayBalance = isLiability ? -Math.abs(balance) : balance;
 
-  // Generate balance history - use real valuations for real estate, mock for others
+  // Generate balance history - use real valuations for real estate and manual investments, mock for others
   const chartData = useMemo(() => {
     const period = TIME_PERIODS.find((p) => p.value === timePeriod);
     const days = period?.days || 365;
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
-    // For real estate, use actual valuation history
-    if (isRealEstate && valuations.length > 0) {
+    // For real estate and manual investments, use actual valuation history
+    if ((isRealEstate || isManualInvestment) && valuations.length > 0) {
       const filteredValuations = valuations
         .filter(v => new Date(v.valuation_date) >= cutoffDate)
         .sort((a, b) => new Date(a.valuation_date).getTime() - new Date(b.valuation_date).getTime());
@@ -199,13 +200,13 @@ export function AccountDetailClient({ account, transactionCount, valuations = []
     }
 
     return data;
-  }, [balance, timePeriod, isRealEstate, valuations]);
+  }, [balance, timePeriod, isRealEstate, isManualInvestment, valuations]);
 
   const groupedTransactions = groupTransactionsByDate(transactions);
 
-  // Calculate change - use real data for real estate, mock for others
+  // Calculate change - use real data for real estate and manual investments, mock for others
   const { change, changePercent, isPositive } = useMemo(() => {
-    if (isRealEstate && valuations.length > 1) {
+    if ((isRealEstate || isManualInvestment) && valuations.length > 1) {
       const period = TIME_PERIODS.find((p) => p.value === timePeriod);
       const days = period?.days || 365;
       const cutoffDate = new Date();
@@ -235,7 +236,7 @@ export function AccountDetailClient({ account, transactionCount, valuations = []
       changePercent: 5,
       isPositive: true,
     };
-  }, [balance, timePeriod, isRealEstate, valuations]);
+  }, [balance, timePeriod, isRealEstate, isManualInvestment, valuations]);
 
   const selectedPeriod = TIME_PERIODS.find((p) => p.value === timePeriod);
   const changeLabel = selectedPeriod?.label || "1 month";
@@ -364,12 +365,12 @@ export function AccountDetailClient({ account, transactionCount, valuations = []
         <Card className="flex-1 min-w-0">
           <CardHeader>
             <CardTitle className="text-base">
-              {isRealEstate ? "Value History" : "Transactions"}
+              {isRealEstate || isManualInvestment ? "Value History" : "Transactions"}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {isRealEstate ? (
-              // Valuation history for real estate
+            {isRealEstate || isManualInvestment ? (
+              // Valuation history for real estate and manual investments
               valuations.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
                   No valuation history found
@@ -537,6 +538,28 @@ export function AccountDetailClient({ account, transactionCount, valuations = []
                   </span>
                 </div>
               </>
+            ) : isManualInvestment ? (
+              // Manual investment summary
+              <>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Account Type</span>
+                  <span className="font-medium">
+                    {account.subtype && INVESTMENT_SUBTYPE_LABELS[account.subtype as InvestmentSubtype]
+                      ? INVESTMENT_SUBTYPE_LABELS[account.subtype as InvestmentSubtype]
+                      : "Investment"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Value Updates</span>
+                  <span className="font-medium tabular-nums">{valuations.length}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Last Updated</span>
+                  <span className="font-medium">
+                    {new Date(account.updated_at).toLocaleDateString()}
+                  </span>
+                </div>
+              </>
             ) : (
               // Regular account summary
               <>
@@ -624,7 +647,7 @@ export function AccountDetailClient({ account, transactionCount, valuations = []
             </div>
 
             {isManualAsset ? (
-              // Delete option for manual assets (real estate and loans)
+              // Delete option for manual assets (real estate, loans, and investments)
               <div className="border-t pt-4 mt-4">
                 <Button
                   variant="destructive"
@@ -634,7 +657,7 @@ export function AccountDetailClient({ account, transactionCount, valuations = []
                   disabled={isDeleting}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  {isDeleting ? "Deleting..." : isRealEstate ? "Delete Asset" : "Delete Loan"}
+                  {isDeleting ? "Deleting..." : isRealEstate ? "Delete Asset" : isManualLoan ? "Delete Loan" : "Delete Investment"}
                 </Button>
               </div>
             ) : (

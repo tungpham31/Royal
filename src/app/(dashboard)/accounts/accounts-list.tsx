@@ -30,7 +30,7 @@ import { SortableAccountGroup } from "./sortable-account-group";
 import { SortableAccountItem } from "./sortable-account-item";
 import { SortableSection } from "./sortable-section";
 import { toggleAccountHidden, updateSectionOrder } from "@/actions/accounts";
-import { REAL_ESTATE_SUBTYPE_LABELS, RealEstateSubtype, LOAN_SUBTYPE_LABELS, LoanSubtype } from "@/types/database";
+import { REAL_ESTATE_SUBTYPE_LABELS, RealEstateSubtype, LOAN_SUBTYPE_LABELS, LoanSubtype, INVESTMENT_SUBTYPE_LABELS, InvestmentSubtype } from "@/types/database";
 import {
   DndContext,
   closestCenter,
@@ -456,6 +456,7 @@ export function AccountsList({ accounts, typeChanges = [], sectionOrder: initial
                         const displayBalance = isLiability ? -Math.abs(balance) : balance;
                         const isRealEstate = account.type === "real_estate";
                         const isManualLoan = account.type === "loan" && !account.plaid_item;
+                        const isManualInvestment = account.type === "investment" && !account.plaid_item;
 
                         return (
                           <SortableAccountItem key={account.id} id={account.id} isEditMode={isEditMode}>
@@ -472,6 +473,10 @@ export function AccountsList({ accounts, typeChanges = [], sectionOrder: initial
                                 ) : isManualLoan ? (
                                   <div className="flex h-11 w-11 items-center justify-center rounded-full bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400">
                                     <Landmark className="h-5 w-5" />
+                                  </div>
+                                ) : isManualInvestment ? (
+                                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400">
+                                    <TrendingUp className="h-5 w-5" />
                                   </div>
                                 ) : institutionLogo ? (
                                   <img
@@ -497,6 +502,8 @@ export function AccountsList({ accounts, typeChanges = [], sectionOrder: initial
                                       <span>{REAL_ESTATE_SUBTYPE_LABELS[account.subtype as RealEstateSubtype] || account.subtype}</span>
                                     ) : isManualLoan && account.subtype ? (
                                       <span>{LOAN_SUBTYPE_LABELS[account.subtype as LoanSubtype] || account.subtype}</span>
+                                    ) : isManualInvestment && account.subtype ? (
+                                      <span>{INVESTMENT_SUBTYPE_LABELS[account.subtype as InvestmentSubtype] || account.subtype}</span>
                                     ) : account.subtype ? (
                                       <span className="capitalize">{account.subtype}</span>
                                     ) : (
@@ -560,6 +567,7 @@ export function AccountsList({ accounts, typeChanges = [], sectionOrder: initial
                             const displayBalance = isLiability ? -Math.abs(balance) : balance;
                             const isRealEstate = account.type === "real_estate";
                             const isManualLoan = account.type === "loan" && !account.plaid_item;
+                            const isManualInvestment = account.type === "investment" && !account.plaid_item;
 
                             return (
                               <div
@@ -578,6 +586,10 @@ export function AccountsList({ accounts, typeChanges = [], sectionOrder: initial
                                   ) : isManualLoan ? (
                                     <div className="flex h-11 w-11 items-center justify-center rounded-full bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 grayscale">
                                       <Landmark className="h-5 w-5" />
+                                    </div>
+                                  ) : isManualInvestment ? (
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 grayscale">
+                                      <TrendingUp className="h-5 w-5" />
                                     </div>
                                   ) : institutionLogo ? (
                                     <img
@@ -607,6 +619,8 @@ export function AccountsList({ accounts, typeChanges = [], sectionOrder: initial
                                         <span>{REAL_ESTATE_SUBTYPE_LABELS[account.subtype as RealEstateSubtype] || account.subtype}</span>
                                       ) : isManualLoan && account.subtype ? (
                                         <span>{LOAN_SUBTYPE_LABELS[account.subtype as LoanSubtype] || account.subtype}</span>
+                                      ) : isManualInvestment && account.subtype ? (
+                                        <span>{INVESTMENT_SUBTYPE_LABELS[account.subtype as InvestmentSubtype] || account.subtype}</span>
                                       ) : account.subtype ? (
                                         <span className="capitalize">{account.subtype}</span>
                                       ) : (

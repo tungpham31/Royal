@@ -582,5 +582,18 @@ export const LOAN_SUBTYPE_LABELS: Record<LoanSubtype, string> = {
   other: "Other Loan",
 };
 
+// Investment types
+export type InvestmentSubtype = "brokerage" | "401k" | "ira" | "roth_ira" | "hsa" | "529" | "other";
+
+export const INVESTMENT_SUBTYPE_LABELS: Record<InvestmentSubtype, string> = {
+  brokerage: "Brokerage",
+  "401k": "401(k)",
+  ira: "Traditional IRA",
+  roth_ira: "Roth IRA",
+  hsa: "HSA",
+  "529": "529 Plan",
+  other: "Other Investment",
+};
+
 // Helper type for asset valuations
 export type AssetValuation = Database["public"]["Tables"]["asset_valuations"]["Row"];

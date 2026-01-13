@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { RealEstateSubtype, LoanSubtype } from "@/types/database";
+import { RealEstateSubtype, LoanSubtype, InvestmentSubtype } from "@/types/database";
 
 interface CreateRealEstateAssetData {
   name: string;
@@ -107,6 +107,69 @@ export async function createManualLoan(data: CreateManualLoanData) {
   if (accountError || !account) {
     console.error("Error creating manual loan:", accountError);
     return { error: "Failed to create loan" };
+  }
+
+  revalidatePath("/accounts");
+  revalidatePath("/dashboard");
+  return { success: true, accountId: account.id };
+}
+
+interface CreateManualInvestmentData {
+  name: string;
+  subtype: InvestmentSubtype;
+  value: number;
+}
+
+export async function createManualInvestment(data: CreateManualInvestmentData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  // Create the account with is_manual=true and type='investment'
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: account, error: accountError } = await (supabase as any)
+    .from("accounts")
+    .insert({
+      user_id: user.id,
+      name: data.name,
+      type: "investment",
+      subtype: data.subtype,
+      current_balance: data.value,
+      currency: "USD",
+      is_manual: true,
+      is_asset: true,
+      include_in_net_worth: true,
+      is_hidden: false,
+      last_balance_update: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (accountError || !account) {
+    console.error("Error creating manual investment:", accountError);
+    return { error: "Failed to create investment" };
+  }
+
+  // Create initial valuation entry
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: valuationError } = await (supabase as any)
+    .from("asset_valuations")
+    .insert({
+      user_id: user.id,
+      account_id: account.id,
+      valuation_date: new Date().toISOString().split("T")[0],
+      value: data.value,
+      notes: "Initial value",
+    });
+
+  if (valuationError) {
+    console.error("Error creating initial valuation:", valuationError);
+    // Don't fail - the account is created, just log the error
   }
 
   revalidatePath("/accounts");

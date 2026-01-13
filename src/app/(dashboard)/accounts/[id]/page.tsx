@@ -4,7 +4,7 @@ import { getAccountById } from "@/actions/accounts";
 import { getAssetValuationHistory } from "@/actions/manual-assets";
 import { getAccountDisplayName } from "@/lib/account-utils";
 import { Header } from "@/components/layout/header";
-import { ChevronRight, Home, Landmark } from "lucide-react";
+import { ChevronRight, Home, Landmark, TrendingUp } from "lucide-react";
 import { AccountDetailClient } from "./account-detail-client";
 
 export const dynamic = "force-dynamic";
@@ -23,12 +23,13 @@ export default async function AccountDetailPage({ params }: AccountDetailPagePro
 
   const isRealEstate = account.type === "real_estate";
   const isManualLoan = account.type === "loan" && account.is_manual;
+  const isManualInvestment = account.type === "investment" && account.is_manual;
   const institutionName = account.plaid_item?.institution_name || "Manual";
   const institutionLogo = account.plaid_item?.institution_logo;
 
-  // Fetch valuation history for real estate accounts
+  // Fetch valuation history for real estate and manual investment accounts
   let valuations: { id: string; valuation_date: string; value: number; notes: string | null; created_at: string }[] = [];
-  if (isRealEstate) {
+  if (isRealEstate || isManualInvestment) {
     const { valuations: fetchedValuations } = await getAssetValuationHistory(id);
     valuations = fetchedValuations || [];
   }
@@ -47,6 +48,8 @@ export default async function AccountDetailPage({ params }: AccountDetailPagePro
                 <Home className="h-5 w-5 text-orange-500" />
               ) : isManualLoan ? (
                 <Landmark className="h-5 w-5 text-red-500" />
+              ) : isManualInvestment ? (
+                <TrendingUp className="h-5 w-5 text-green-500" />
               ) : institutionLogo ? (
                 <img
                   src={`data:image/png;base64,${institutionLogo}`}
