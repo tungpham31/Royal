@@ -6,6 +6,7 @@ import {
   getNetWorthHistory,
   getCurrentMonthSpending,
   getLastSyncTime,
+  getPassiveCashFlowStats,
 } from "@/actions/dashboard";
 import { DashboardClient } from "./dashboard-client";
 import { SyncButton } from "@/components/plaid/sync-button";
@@ -18,6 +19,7 @@ export default async function DashboardPage() {
     netWorthResult,
     spendingResult,
     lastSyncResult,
+    passiveCashFlowResult,
   ] = await Promise.all([
     getDashboardStats(),
     getRecentTransactions(),
@@ -25,6 +27,7 @@ export default async function DashboardPage() {
     getNetWorthHistory(365), // Fetch 1 year for time period filtering
     getCurrentMonthSpending(),
     getLastSyncTime(),
+    getPassiveCashFlowStats(),
   ]);
 
   const currentNetWorth = statsResult.stats?.netWorth || 0;
@@ -33,6 +36,7 @@ export default async function DashboardPage() {
   const netWorthHistory = netWorthResult.history || [];
   const spendingHistory = spendingResult.spendingHistory || [];
   const lastMonthHistory = spendingResult.lastMonthHistory || [];
+  const passiveCashFlowStats = passiveCashFlowResult.stats || { totalCashFlowAssets: 0, passiveCashFlow3Pct: 0, passiveCashFlow4Pct: 0 };
 
   return (
     <>
@@ -49,6 +53,7 @@ export default async function DashboardPage() {
           spendingHistory={spendingHistory}
           lastMonthHistory={lastMonthHistory}
           transactions={transactions}
+          passiveCashFlowStats={passiveCashFlowStats}
         />
       </div>
     </>

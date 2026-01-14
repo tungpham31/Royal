@@ -339,3 +339,54 @@ export async function getLastSyncTime(): Promise<{ lastSyncTime: string | null }
 
   return { lastSyncTime: data?.completed_at || null };
 }
+
+interface CashFlowAccountRow {
+  type: string;
+  current_balance: number | null;
+  generates_cash_flow: boolean;
+}
+
+export async function getPassiveCashFlowStats() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  // Get accounts that generate cash flow
+  const { data: accounts } = await supabase
+    .from("accounts")
+    .select("type, current_balance, generates_cash_flow")
+    .eq("user_id", user.id)
+    .eq("generates_cash_flow", true)
+    .eq("include_in_net_worth", true)
+    .eq("is_hidden", false)
+    .returns<CashFlowAccountRow[]>();
+
+  // Calculate totals - assets minus liabilities
+  let totalCashFlowAssets = 0;
+
+  (accounts || []).forEach((account) => {
+    const balance = account.current_balance || 0;
+    if (account.type === "credit" || account.type === "loan") {
+      // Liabilities subtract from total
+      totalCashFlowAssets -= Math.abs(balance);
+    } else {
+      // Assets add to total
+      totalCashFlowAssets += balance;
+    }
+  });
+
+  // Passive cash flow calculations
+  const passiveCashFlow3Pct = totalCashFlowAssets * 0.03;
+  const passiveCashFlow4Pct = totalCashFlowAssets * 0.04;
+
+  return {
+    stats: {
+      totalCashFlowAssets,
+      passiveCashFlow3Pct,
+      passiveCashFlow4Pct,
+    },
+  };
+}

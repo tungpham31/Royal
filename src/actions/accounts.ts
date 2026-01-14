@@ -22,6 +22,7 @@ interface AccountWithPlaidItem {
   is_asset: boolean;
   include_in_net_worth: boolean;
   is_hidden: boolean;
+  generates_cash_flow: boolean;
   display_order?: number;
   last_balance_update: string | null;
   created_at: string;
@@ -349,4 +350,29 @@ export async function updateSectionOrder(order: string[]) {
 
   revalidatePath("/accounts");
   return { success: true };
+}
+
+export async function toggleAccountCashFlow(accountId: string, generatesCashFlow: boolean) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: updateError } = await (supabase as any)
+    .from("accounts")
+    .update({ generates_cash_flow: generatesCashFlow })
+    .eq("id", accountId)
+    .eq("user_id", user.id);
+
+  if (updateError) {
+    console.error("Error updating account cash flow setting:", updateError);
+    return { error: "Failed to update account" };
+  }
+
+  revalidatePath("/accounts");
+  revalidatePath("/dashboard");
+  return { success: true, generates_cash_flow: generatesCashFlow };
 }

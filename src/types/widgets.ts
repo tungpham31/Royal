@@ -1,7 +1,8 @@
 export type WidgetId =
   | "net-worth"
   | "spending"
-  | "recent-transactions";
+  | "recent-transactions"
+  | "passive-cash-flow";
 
 export type WidgetSize = "small" | "medium" | "large" | "full";
 
@@ -41,10 +42,18 @@ export const WIDGET_DEFINITIONS: Record<WidgetId, WidgetDefinition> = {
     defaultSize: "medium",
     minSize: "small",
   },
+  "passive-cash-flow": {
+    id: "passive-cash-flow",
+    name: "Passive Cash Flow",
+    description: "Track your cash flow assets and passive income",
+    defaultSize: "small",
+    minSize: "small",
+  },
 };
 
 export const DEFAULT_WIDGET_LAYOUT: WidgetConfig[] = [
   { id: "net-worth", visible: true, order: 0 },
-  { id: "spending", visible: true, order: 1 },
-  { id: "recent-transactions", visible: true, order: 2 },
+  { id: "passive-cash-flow", visible: true, order: 1 },
+  { id: "spending", visible: true, order: 2 },
+  { id: "recent-transactions", visible: true, order: 3 },
 ];

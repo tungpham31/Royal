@@ -14,8 +14,9 @@ import {
 } from "@/components/ui/select";
 import { formatPrivateAmount, MASKED_AMOUNT_SHORT } from "@/lib/utils";
 import { usePrivacyStore } from "@/lib/stores/privacy-store";
-import { updateAccountNickname } from "@/actions/accounts";
+import { updateAccountNickname, toggleAccountCashFlow } from "@/actions/accounts";
 import { deleteManualAsset } from "@/actions/manual-assets";
+import { Switch } from "@/components/ui/switch";
 import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Pencil, Check, X, Trash2 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -52,6 +53,7 @@ interface Account {
   currency: string;
   updated_at: string;
   is_manual?: boolean;
+  generates_cash_flow?: boolean;
   plaid_item?: {
     institution_name: string;
     institution_logo: string | null;
@@ -115,6 +117,8 @@ export function AccountDetailClient({ account, transactionCount, valuations = []
   const [isSaving, setIsSaving] = useState(false);
   const [updateValueOpen, setUpdateValueOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [generatesCashFlow, setGeneratesCashFlow] = useState(account.generates_cash_flow !== false);
+  const [isTogglingCashFlow, setIsTogglingCashFlow] = useState(false);
 
   const isRealEstate = account.type === "real_estate";
   const isManualLoan = account.type === "loan" && account.is_manual;
@@ -145,6 +149,16 @@ export function AccountDetailClient({ account, transactionCount, valuations = []
       setIsDeleting(false);
       alert("Failed to delete asset");
     }
+  };
+
+  const handleToggleCashFlow = async (checked: boolean) => {
+    setIsTogglingCashFlow(true);
+    setGeneratesCashFlow(checked);
+    const result = await toggleAccountCashFlow(account.id, checked);
+    if (!result.success) {
+      setGeneratesCashFlow(!checked);
+    }
+    setIsTogglingCashFlow(false);
   };
 
   const transactions = account.transactions || [];
@@ -644,6 +658,29 @@ export function AccountDetailClient({ account, transactionCount, valuations = []
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Cash Flow Toggle */}
+            <div className="border-t pt-4 mt-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <label
+                    htmlFor="cash-flow-toggle"
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    Include in Cash Flow
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Affects passive income calculation
+                  </p>
+                </div>
+                <Switch
+                  id="cash-flow-toggle"
+                  checked={generatesCashFlow}
+                  onCheckedChange={handleToggleCashFlow}
+                  disabled={isTogglingCashFlow}
+                />
+              </div>
             </div>
 
             {isManualAsset ? (
